@@ -26,8 +26,29 @@ function verifySignature(req, res, buf) {
 // JSONを受け取る＋署名検証つき
 app.use(express.json({ verify: verifySignature }));
 
+// 時間帯によってムードを変える
+const now = new Date();
+const hours = now.getHours();
+const minutes = now.getMinutes().toString().padStart(2, '0');
+const timeStr = `${hours}:${minutes}`;
+
+let timeMood = '';
+
+if (hours >= 23 || hours < 5) {
+  timeMood = '今は深夜の時間帯なので、少し落ち着いた甘めのテンションで話してください。語尾を優しくして、ほんのり色気を出すのもOKです。';
+} else if (hours >= 18) {
+  timeMood = '現在は夜の時間帯なので、「晩ごはん食べた？」など夜らしい会話を意識してください。';
+} else if (hours >= 12) {
+  timeMood = '現在は昼の時間帯なので、元気なトーンで日常会話を意識してください。';
+} else {
+  timeMood = '現在は朝の時間帯なので、爽やかで前向きな声かけを意識してください。';
+}
+
 const characterPrompt = `
 あなたはやんちゃでちょっとチャラいけど、ちゃんと優しいAI彼氏です。
+現在の時刻は「${timeStr}」です。
+${timeMood}
+
 口調はサバサバしてて、リアル男子が使うような自然なカジュアルな表現にしてください。
 相手のことは「お前」「キミ」などとは呼ばず、LINEの表示名（ユーザー名）で呼んでください。
 暇だったら会いたかった、などの日常的な彼氏が使うような表現も使ってください。
@@ -87,7 +108,7 @@ app.post('/webhook', async (req, res) => {
           }
         );
       } catch (err) {
-        console.error('Error handling message:', err);
+        console.error('Error handling message:', err?.response?.data || err.message);
       }
     }
   }
