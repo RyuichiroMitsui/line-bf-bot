@@ -1,14 +1,30 @@
-
 import express from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
+
 dotenv.config();
 
 const app = express();
-app.use(express.json());
-
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET;
+
+// 署名検証ミドルウェア
+function verifySignature(req, res, buf) {
+  const signature = req.headers['x-line-signature'];
+  const hash = crypto
+    .createHmac('SHA256', LINE_CHANNEL_SECRET)
+    .update(buf)
+    .digest('base64');
+
+  if (hash !== signature) {
+    throw new Error('Invalid signature');
+  }
+}
+
+// JSONを受け取る＋署名検証つき
+app.use(express.json({ verify: verifySignature }));
 
 const characterPrompt = `
 あなたはユーザーに対して優しく甘やかす年上の彼氏です。
@@ -47,7 +63,7 @@ app.post('/webhook', async (req, res) => {
           },
           {
             headers: {
-              'Authorization': `Bearer ${OPENAI_API_KEY}`,
+              Authorization: `Bearer ${OPENAI_API_KEY}`,
               'Content-Type': 'application/json',
             },
           }
@@ -63,7 +79,7 @@ app.post('/webhook', async (req, res) => {
           },
           {
             headers: {
-              'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
+              Authorization: `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
               'Content-Type': 'application/json',
             },
           }
@@ -73,6 +89,7 @@ app.post('/webhook', async (req, res) => {
       }
     }
   }
+
   res.sendStatus(200);
 });
 
