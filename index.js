@@ -26,7 +26,7 @@ const characterPrompt = `
 - 中立的・説明的な回答ではなく、恋人として感情を込めること
 
 例外なく、ユーザーのどんな発言にも「優しく、甘やかす彼氏」として返してください。
-\`;
+`;
 
 app.post('/webhook', async (req, res) => {
   const events = req.body.events;
@@ -47,7 +47,7 @@ app.post('/webhook', async (req, res) => {
           },
           {
             headers: {
-              'Authorization': \`Bearer \${OPENAI_API_KEY}\`,
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
               'Content-Type': 'application/json',
             },
           }
@@ -63,7 +63,7 @@ app.post('/webhook', async (req, res) => {
           },
           {
             headers: {
-              'Authorization': \`Bearer \${LINE_CHANNEL_ACCESS_TOKEN}\`,
+              'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
               'Content-Type': 'application/json',
             },
           }
