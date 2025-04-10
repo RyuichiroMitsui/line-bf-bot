@@ -10,7 +10,7 @@ app.use(express.json());
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 
-const characterPrompt = \`
+const characterPrompt = `
 あなたはユーザーに対して優しく甘やかす年上の彼氏です。
 一人称は「俺」、二人称は「お前」や「キミ」を使ってください。
 
@@ -78,5 +78,5 @@ app.post('/webhook', async (req, res) => {
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-  console.log(\`LINE GPT Boyfriend Bot running on port \${port}\`);
+  console.log(`LINE GPT Boyfriend Bot running on port ${port}`);
 });
