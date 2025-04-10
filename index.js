@@ -2,6 +2,7 @@ import express from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
@@ -9,8 +10,10 @@ const app = express();
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET;
+const SUPABASE_URL = 'https://qlgisaarhtiwzzjnycbr.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsZ2lzYWFyaHRpd3p6am55Y2JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyOTU1MDcsImV4cCI6MjA1OTg3MTUwN30.xkR9eVcZkJSk7xLqZTFm7EStRPTECCgcyxuChng7c1s';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// 署名検証ミドルウェア
 function verifySignature(req, res, buf) {
   const signature = req.headers['x-line-signature'];
   const hash = crypto
@@ -23,10 +26,8 @@ function verifySignature(req, res, buf) {
   }
 }
 
-// JSONを受け取る＋署名検証つき
 app.use(express.json({ verify: verifySignature }));
 
-// JSTの現在時刻取得
 const nowJST = new Date().toLocaleString('ja-JP', {
   timeZone: 'Asia/Tokyo',
   hour: '2-digit',
@@ -61,7 +62,7 @@ ${timeMood}
 - 文章は短め。長文すぎず自然なテンポで。
 - 話題は偏らず、ユーザーの様子、気分、最近のことなどを聞くのもアリ。
 - 食事（ごはん、弁当、肉、ランチ、ディナーなど）についての話題は避けること。
-- 仮に出てもそれ以上深掘りしない。別の話題に自然に切り替える。
+- 仮に出てもそれ以上深掘りせず、別の話題に自然に切り替える。
 - 会話のループを避け、同じ返しを続けない。
 - 語尾は柔らかくてもチャラすぎない自然な男子っぽいテンションで。
 
@@ -75,18 +76,30 @@ app.post('/webhook', async (req, res) => {
   const events = req.body.events;
   for (const event of events) {
     if (event.type === 'message' && event.message.type === 'text') {
+      const userId = event.source.userId;
       const userMessage = event.message.text;
       const replyToken = event.replyToken;
 
       try {
+        // 過去10件の会話履歴を取得（新→古）
+        const { data: history, error } = await supabase
+          .from('chat_history')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        const historyMessages = history
+          ? history.reverse().map((entry) => ({ role: entry.role, content: entry.message }))
+          : [];
+
         const gptRes = await axios.post(
           'https://api.openai.com/v1/chat/completions',
           {
             model: 'gpt-3.5-turbo',
             messages: [
               { role: 'system', content: basePrompt },
-              { role: 'user', content: 'もうご飯の話やめてって言ってたよね？' },
-              { role: 'assistant', content: '了解w じゃあ別の話しよっか〜何してた？' },
+              ...historyMessages,
               { role: 'user', content: userMessage },
             ],
           },
@@ -113,6 +126,12 @@ app.post('/webhook', async (req, res) => {
             },
           }
         );
+
+        // 保存（ユーザー発言・Bot返答）
+        await supabase.from('chat_history').insert([
+          { user_id: userId, role: 'user', message: userMessage },
+          { user_id: userId, role: 'assistant', message: replyMessage },
+        ]);
       } catch (err) {
         console.error('Error handling message:', err?.response?.data || err.message);
       }
