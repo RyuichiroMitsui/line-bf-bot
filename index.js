@@ -27,9 +27,15 @@ function verifySignature(req, res, buf) {
 app.use(express.json({ verify: verifySignature }));
 
 // 時間帯によってムードを変える
-const now = new Date();
-const hours = now.getHours();
-const minutes = now.getMinutes().toString().padStart(2, '0');
+const nowJST = new Date().toLocaleString('ja-JP', {
+  timeZone: 'Asia/Tokyo',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+const hours = parseInt(nowJST.split(':')[0], 10);
+const minutes = nowJST.split(':')[1];
 const timeStr = `${hours}:${minutes}`;
 
 let timeMood = '';
