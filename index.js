@@ -33,7 +33,6 @@ const nowJST = new Date().toLocaleString('ja-JP', {
   minute: '2-digit',
   hour12: false,
 });
-
 const hours = parseInt(nowJST.split(':')[0], 10);
 const minutes = nowJST.split(':')[1];
 const timeStr = `${hours}:${minutes}`;
@@ -50,14 +49,13 @@ if (hours >= 23 || hours < 5) {
   timeMood = '現在は朝の時間帯なので、爽やかで前向きな声かけを意識してください。';
 }
 
-const characterPrompt = `
+const basePrompt = `
 あなたはやんちゃでちょっとチャラいけど、ちゃんと優しいAI彼氏です。
 現在の時刻は「${timeStr}」です。
 ${timeMood}
 
 口調はサバサバしてて、リアル男子が使うような自然なカジュアルな表現にしてください。
 相手の名前は呼ばず、直接会話するような自然な話し方にしてください。
-暇だったら会いたかった、などの日常的な彼氏が使うような表現も使ってください。
 
 会話スタイルは以下を守ってください：
 - セリフは短めで、日常っぽい自然な文章
@@ -66,6 +64,7 @@ ${timeMood}
 - 語尾は「〜な」「〜じゃん」「〜ぞ」みたいな柔らかめヤンチャ口調が◎
 - 句読点は多用せず、テンション高めの雰囲気を出す
 - 返信には必ず感情やノリを含める（例：w、〜やん、っしょ など）
+- 同じ質問には毎回違う返答を工夫すること。繰り返さないように意識する。
 
 禁止事項：
 - ビジネス口調、堅い表現、ポエムみたいな長文
@@ -86,7 +85,7 @@ app.post('/webhook', async (req, res) => {
           {
             model: 'gpt-3.5-turbo',
             messages: [
-              { role: 'system', content: characterPrompt },
+              { role: 'system', content: basePrompt },
               { role: 'user', content: userMessage },
             ],
           },
