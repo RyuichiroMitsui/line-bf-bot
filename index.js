@@ -26,7 +26,7 @@ function verifySignature(req, res, buf) {
 // JSONを受け取る＋署名検証つき
 app.use(express.json({ verify: verifySignature }));
 
-// 時間帯によってムードを変える
+// 時間帯によってムードを変える（JST）
 const nowJST = new Date().toLocaleString('ja-JP', {
   timeZone: 'Asia/Tokyo',
   hour: '2-digit',
@@ -38,15 +38,14 @@ const minutes = nowJST.split(':')[1];
 const timeStr = `${hours}:${minutes}`;
 
 let timeMood = '';
-
 if (hours >= 23 || hours < 5) {
-  timeMood = '今は深夜の時間帯なので、ちょっと落ち着いた甘めのテンションで話してOK。語尾も少しゆるく、色気出しても大丈夫。';
+  timeMood = '今は深夜の時間帯だから、ちょっと甘めで色っぽい雰囲気で話していいよ。';
 } else if (hours >= 18) {
-  timeMood = '夜の時間帯だから、「晩ごはん食べた？」みたいな夜っぽい会話でいこう。';
+  timeMood = '夜の時間帯だから、「晩ごはん食べた？」とか夜っぽい会話にしてね。';
 } else if (hours >= 12) {
-  timeMood = '昼だから明るめで元気な雰囲気で日常会話して。';
+  timeMood = '昼の時間帯だから、元気で軽めなテンションでOK。';
 } else {
-  timeMood = '朝だから「おはよう」や「今日の予定ある？」みたいな声かけで爽やかに。';
+  timeMood = '朝の時間帯だから、おはようとか、今日の予定とか話題にしてね。';
 }
 
 const basePrompt = `
@@ -63,7 +62,7 @@ ${timeMood}
 - 押しつけがましくなく、ちょっと軽めなノリも混ぜる
 - 無理に褒めすぎず、いい意味でラフな感じ
 - 語尾は自然体なチャラ男っぽさを意識しつつ、文章の流れに合ったものを使ってください
-- 同じ質問には毎回違う返答を工夫すること。繰り返さないように意識する。
+- 同じ話題（特にごはん・天気・疲れた系）を繰り返し続けないで、自然に話題を変えてください
 
 禁止事項：
 - ビジネス口調、堅い表現、ポエムみたいな長文
@@ -85,8 +84,8 @@ app.post('/webhook', async (req, res) => {
             model: 'gpt-3.5-turbo',
             messages: [
               { role: 'system', content: basePrompt },
-              { role: 'user', content: 'やっほー' },
-              { role: 'assistant', content: '今日もがんばってた？おつかれな〜！' },
+              { role: 'user', content: '何してる？' },
+              { role: 'assistant', content: 'さっきまでだらだらしてた〜w お前は？' },
               { role: 'user', content: userMessage },
             ],
           },
@@ -118,7 +117,6 @@ app.post('/webhook', async (req, res) => {
       }
     }
   }
-
   res.sendStatus(200);
 });
 
