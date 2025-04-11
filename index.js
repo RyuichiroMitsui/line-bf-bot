@@ -81,7 +81,6 @@ app.post('/webhook', async (req, res) => {
       const replyToken = event.replyToken;
 
       try {
-        // 過去10件の会話履歴を取得（新→古）
         const { data: history, error } = await supabase
           .from('chat_history')
           .select('*')
@@ -96,7 +95,7 @@ app.post('/webhook', async (req, res) => {
         const gptRes = await axios.post(
           'https://api.openai.com/v1/chat/completions',
           {
-            model: 'gpt-3.5-turbo',
+            model: 'gpt-4-1106-preview',
             messages: [
               { role: 'system', content: basePrompt },
               ...historyMessages,
@@ -127,7 +126,6 @@ app.post('/webhook', async (req, res) => {
           }
         );
 
-        // 保存（ユーザー発言・Bot返答）
         await supabase.from('chat_history').insert([
           { user_id: userId, role: 'user', message: userMessage },
           { user_id: userId, role: 'assistant', message: replyMessage },
