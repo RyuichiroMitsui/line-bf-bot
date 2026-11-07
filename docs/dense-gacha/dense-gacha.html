@@ -25,7 +25,7 @@ body{font-family:var(--font);color:var(--ink);font-size:15px;line-height:1.6;pad
 .wrap{max-width:520px;margin:0 auto}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 0 6px}
 .logo{font-family:var(--disp);font-size:30px;letter-spacing:.1em;color:var(--gold2);line-height:1}
-.logo small{display:block;font-family:var(--font);font-size:9px;letter-spacing:.35em;color:var(--mute);font-weight:500;margin-top:2px}
+.logo small{display:block;font-family:var(--font);font-size:9px;letter-spacing:.26em;white-space:nowrap;color:var(--mute);font-weight:500;margin-top:2px}
 .eyebrow{font-family:var(--disp);font-size:13px;letter-spacing:.22em;color:var(--gold);display:flex;align-items:center;gap:8px}
 .eyebrow:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--gold-deep),transparent)}
 h1{font-size:24px;font-weight:900;line-height:1.3;margin:6px 0 4px;text-wrap:balance}
@@ -71,7 +71,7 @@ input[type=number]{font-variant-numeric:tabular-nums}
 .machine{width:100%;height:auto;display:block}
 .caps{transform-origin:150px 118px}
 .spinning .caps{animation:shake .5s ease-in-out infinite}
-.crank{transform-origin:150px 258px}
+.crank{transform-origin:150px 266px}
 .spinning .crank{animation:crank 1.6s cubic-bezier(.5,.1,.3,1) 1}
 .capsule-out{opacity:0;transform-origin:150px 330px}
 .dropped .capsule-out{animation:drop .7s cubic-bezier(.3,1.4,.5,1) forwards}
@@ -161,7 +161,7 @@ details summary{cursor:pointer;color:var(--gold2);font-weight:700;font-size:13.5
   <!-- ================= CUSTOMER VIEW ================= -->
   <section id="v-gacha">
     <div class="topbar">
-      <div class="logo">DENSE<small>ROPPONGI · MEMBERS SHISHA BAR</small></div>
+      <div class="logo">DENSE<small>ROPPONGI · SHISHA BAR</small></div>
       <span class="pill g" id="g-day">本日限り</span>
     </div>
     <div class="eyebrow">TONIGHT'S LUCK</div>
@@ -190,13 +190,13 @@ details summary{cursor:pointer;color:var(--gold2);font-weight:700;font-size:13.5
           <rect x="58" y="200" width="184" height="18" rx="6" fill="url(#goldg)"/>
           <!-- body -->
           <rect x="66" y="216" width="168" height="134" rx="14" fill="url(#body)" stroke="rgba(240,210,138,.35)"/>
-          <text x="150" y="243" text-anchor="middle" font-family="Bebas Neue" font-size="22" letter-spacing="5" fill="#f0d28a">DENSE</text>
+          <text x="150" y="236" text-anchor="middle" font-family="Bebas Neue" font-size="19" letter-spacing="5" fill="#f0d28a">DENSE</text>
           <!-- crank -->
           <g class="crank">
-            <circle cx="150" cy="258" r="22" fill="#0b0b0d" stroke="url(#goldg)" stroke-width="3"/>
-            <rect x="146" y="238" width="8" height="40" rx="3" fill="url(#goldg)"/>
-            <rect x="130" y="254" width="40" height="8" rx="3" fill="url(#goldg)"/>
-            <circle cx="150" cy="258" r="6" fill="#f0d28a"/>
+            <circle cx="150" cy="266" r="18" fill="#0b0b0d" stroke="url(#goldg)" stroke-width="3"/>
+            <rect x="146.5" y="250" width="7" height="32" rx="3" fill="url(#goldg)"/>
+            <rect x="134" y="262.5" width="32" height="7" rx="3" fill="url(#goldg)"/>
+            <circle cx="150" cy="266" r="5" fill="#f0d28a"/>
           </g>
           <!-- outlet -->
           <path d="M108 296 h84 v38 a6 6 0 0 1 -6 6 h-72 a6 6 0 0 1 -6 -6 z" fill="#060607" stroke="rgba(240,210,138,.35)"/>
@@ -389,6 +389,8 @@ async function makeCode(str){
   return 'DNS-'+out;
 }
 const uid8 = () => Math.random().toString(36).slice(2,10);
+// snapshots from the shared store are frozen: always work on a copy
+const clone = x => (x==null ? x : JSON.parse(JSON.stringify(x)));
 
 /* ---------- storage: shared db when available, else this device ---------- */
 const LS = {
@@ -414,16 +416,16 @@ const Store = {
     return this.ready;
   },
   normPub(d){ const p={...DEFAULT_PUBLIC, ...(d||{})}; if(!Array.isArray(p.prizes)||!p.prizes.length) p.prizes=DEFAULT_PRIZES; return p; },
-  async getPublic(){ if(this.mode==='db'){ const s=await this.db.doc('config/public').get(); return this.normPub(s.exists?s.data():null); } return this.normPub(LS.get('public',null)); },
+  async getPublic(){ if(this.mode==='db'){ const s=await this.db.doc('config/public').get(); return this.normPub(s.exists?clone(s.data()):null); } return this.normPub(LS.get('public',null)); },
   async setPublic(p){ p={...p, updatedAt:Date.now()}; if(this.mode==='db'){ await this.db.doc('config/public').set(p); } else LS.set('public',p); return p; },
-  async getPrivate(){ let d=null; if(this.mode==='db'){ const s=await this.db.doc('config/private').get(); d=s.exists?s.data():null; } else d=LS.get('private',null); return {...DEFAULT_PRIVATE, ...(d||{})}; },
+  async getPrivate(){ let d=null; if(this.mode==='db'){ const s=await this.db.doc('config/private').get(); d=s.exists?clone(s.data()):null; } else d=LS.get('private',null); return {...DEFAULT_PRIVATE, ...(d||{})}; },
   async setPrivate(p){ if(this.mode==='db'){ await this.db.doc('config/private').set(p); } else LS.set('private',p); },
-  async getCounters(day){ let d=null; if(this.mode==='db'){ const s=await this.db.doc('counters/'+day).get(); d=s.exists?s.data():null; } else d=LS.get('counters_'+day,null); return {counts:{}, total:0, ...(d||{})}; },
+  async getCounters(day){ let d=null; if(this.mode==='db'){ const s=await this.db.doc('counters/'+day).get(); d=s.exists?clone(s.data()):null; } else d=LS.get('counters_'+day,null); return {counts:{}, total:0, ...(d||{})}; },
   async setCounters(day,c){ if(this.mode==='db'){ await this.db.doc('counters/'+day).set(c); } else LS.set('counters_'+day,c); },
   // spins: db mode = one doc per viewer (spins/<uid>) with an entries array; local = one array
-  async getMySpins(){ if(this.mode==='db'){ if(!this.uid) return []; const s=await this.db.doc('spins/'+this.uid).get(); return s.exists?(s.data().entries||[]):[]; } return LS.get('spins',[]); },
+  async getMySpins(){ if(this.mode==='db'){ if(!this.uid) return []; const s=await this.db.doc('spins/'+this.uid).get(); return s.exists?clone(s.data().entries||[]):[]; } return LS.get('spins',[]); },
   async addMySpin(e){
-    if(this.mode==='db'){ if(!this.uid) throw new Error('no-id'); const ref=this.db.doc('spins/'+this.uid); const s=await ref.get(); const entries=s.exists?[...(s.data().entries||[])]:[]; entries.push(e); await ref.set({entries, uid:this.uid}); }
+    if(this.mode==='db'){ if(!this.uid) throw new Error('no-id'); const ref=this.db.doc('spins/'+this.uid); const s=await ref.get(); const entries=s.exists?clone(s.data().entries||[]):[]; entries.push(e); await ref.set({entries, uid:this.uid}); }
     else { const a=LS.get('spins',[]); a.push(e); LS.set('spins',a); }
   },
   async getAllSpins(){ if(this.mode==='db'){ const q=await this.db.collection('spins').get(); const out=[]; q.docs.forEach(d=>{ const b=d.data()||{}; (b.entries||[]).forEach(e=>out.push({...e, uid:d.id})); }); return out; } return LS.get('spins',[]).map(e=>({...e, uid:'local'})); },
@@ -442,7 +444,7 @@ const Store = {
   // test helper: wipe this viewer's spins for the day and give the counters back
   async resetMyToday(day){
     let removed=[];
-    if(this.mode==='db'){ if(!this.uid) return 0; const ref=this.db.doc('spins/'+this.uid); const s=await ref.get(); const all=s.exists?(s.data().entries||[]):[]; removed=all.filter(e=>e.day===day); if(removed.length) await ref.set({entries: all.filter(e=>e.day!==day), uid:this.uid}); }
+    if(this.mode==='db'){ if(!this.uid) return 0; const ref=this.db.doc('spins/'+this.uid); const s=await ref.get(); const all=s.exists?clone(s.data().entries||[]):[]; removed=all.filter(e=>e.day===day); if(removed.length) await ref.set({entries: all.filter(e=>e.day!==day), uid:this.uid}); }
     else { const all=LS.get('spins',[]); removed=all.filter(e=>e.day===day); LS.set('spins', all.filter(e=>e.day!==day)); }
     if(removed.length){ const c=await this.getCounters(day); c.counts=c.counts||{}; removed.forEach(e=>{ c.counts[e.prizeId]=Math.max(0,(c.counts[e.prizeId]||0)-1); }); c.total=Math.max(0,(c.total||0)-removed.length); await this.setCounters(day,c); }
     return removed.length;
