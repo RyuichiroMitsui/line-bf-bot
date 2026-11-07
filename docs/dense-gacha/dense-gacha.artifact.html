@@ -1,0 +1,672 @@
+<title>DENSE ガチャ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Bebas+Neue&display=swap">
+<style>
+/* Layout: one dark lounge screen. Customer view = machine + ticket. Admin view = stacked cards. */
+:root{
+  color-scheme:dark;
+  --bg:#0d0d0f; --bg2:#141417; --card:#1b1b1f; --card2:#232329; --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.18);
+  --ink:#f3f1ea; --ink2:#cfccc2; --mute:#8d8b84;
+  --gold:#d9ab4a; --gold2:#f0d28a; --gold-deep:#8a6a2a; --gold-wash:rgba(217,171,74,.12);
+  --ok:#5fcf8b; --warn:#f0b35a; --bad:#e86c6c; --info:#6fb3ff;
+  --font:'Noto Sans JP',system-ui,-apple-system,sans-serif; --disp:'Bebas Neue','Noto Sans JP',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg)}
+body{font-family:var(--font);color:var(--ink);font-size:15px;line-height:1.6;padding-block:0 32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));min-height:100%;background:radial-gradient(120% 50% at 50% -10%,#2a2113 0%,var(--bg) 55%)}
+.wrap{max-width:520px;margin:0 auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 0 6px}
+.logo{font-family:var(--disp);font-size:30px;letter-spacing:.1em;color:var(--gold2);line-height:1}
+.logo small{display:block;font-family:var(--font);font-size:9px;letter-spacing:.35em;color:var(--mute);font-weight:500;margin-top:2px}
+.eyebrow{font-family:var(--disp);font-size:13px;letter-spacing:.22em;color:var(--gold);display:flex;align-items:center;gap:8px}
+.eyebrow:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--gold-deep),transparent)}
+h1{font-size:24px;font-weight:900;line-height:1.3;margin:6px 0 4px;text-wrap:balance}
+h2{font-size:16px;font-weight:700;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+h2 .b{font-family:var(--disp);font-size:14px;color:#1a1200;background:var(--gold);border-radius:6px;padding:1px 7px;letter-spacing:.08em}
+p{margin:0;color:var(--ink2)}
+.lead{font-size:13.5px;color:var(--ink2);margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.card.gold{background:linear-gradient(160deg,rgba(217,171,74,.16),rgba(217,171,74,.04));border-color:rgba(217,171,74,.35)}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{min-width:0}
+.col{flex:1 1 140px}
+.note{font-size:12px;color:var(--mute);line-height:1.5}
+.note b{color:var(--ink2)}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;border:1px solid var(--line2);color:var(--ink2);background:rgba(255,255,255,.03);white-space:nowrap}
+.pill.g{border-color:rgba(217,171,74,.5);color:var(--gold2);background:var(--gold-wash)}
+.pill.ok{border-color:rgba(95,207,139,.5);color:var(--ok)}
+.pill.warn{border-color:rgba(240,179,90,.5);color:var(--warn)}
+.pill.bad{border-color:rgba(232,108,108,.5);color:var(--bad)}
+.pill.info{border-color:rgba(111,179,255,.5);color:var(--info)}
+label.f{display:block;font-size:12px;color:var(--mute);margin-bottom:4px;font-weight:500}
+input[type=text],input[type=number],input[type=password],select,textarea{width:100%;background:var(--bg2);color:var(--ink);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;font:inherit;font-size:15px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(217,171,74,.18)}
+input[type=number]{font-variant-numeric:tabular-nums}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;border-radius:12px;padding:12px 18px;font:inherit;font-size:15px;font-weight:700;cursor:pointer;color:var(--ink);background:var(--card2);transition:transform .08s ease,filter .15s ease}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
+.btn.primary{background:linear-gradient(180deg,var(--gold2),var(--gold) 55%,#b98a2e);color:#1a1200;box-shadow:0 8px 24px rgba(217,171,74,.25)}
+.btn.primary:disabled{filter:grayscale(.6) brightness(.7);cursor:not-allowed;box-shadow:none}
+.btn.ghost{background:transparent;border-color:var(--line2);color:var(--ink2)}
+.btn.sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
+.btn.danger{border-color:rgba(232,108,108,.5);color:var(--bad);background:transparent}
+.btn.block{width:100%}
+.hidden-link{color:var(--mute);font-size:11px;text-decoration:none}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#f3f1ea;color:#1a1200;padding:10px 16px;border-radius:999px;font-size:13px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:50;max-width:calc(100% - 32px)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:baseline;font-size:13px}
+.kv .k{color:var(--mute);white-space:nowrap}
+.kv .v{color:var(--ink)}
+
+/* ---------- machine ---------- */
+.machine-wrap{position:relative;margin:4px auto 0;max-width:340px}
+.machine{width:100%;height:auto;display:block}
+.caps{transform-origin:150px 118px}
+.spinning .caps{animation:shake .5s ease-in-out infinite}
+.crank{transform-origin:150px 258px}
+.spinning .crank{animation:crank 1.6s cubic-bezier(.5,.1,.3,1) 1}
+.capsule-out{opacity:0;transform-origin:150px 330px}
+.dropped .capsule-out{animation:drop .7s cubic-bezier(.3,1.4,.5,1) forwards}
+.opened .capsule-out{animation:none;opacity:0}
+.glow{opacity:0;transition:opacity .5s}
+.dropped .glow{opacity:1}
+@keyframes shake{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(-3px,2px) rotate(-2deg)}50%{transform:translate(2px,-3px) rotate(1.5deg)}75%{transform:translate(3px,2px) rotate(-1deg)}}
+@keyframes crank{to{transform:rotate(720deg)}}
+@keyframes drop{0%{opacity:0;transform:translateY(-60px) scale(.6)}60%{opacity:1;transform:translateY(6px) scale(1.05)}100%{opacity:1;transform:translateY(0) scale(1)}}
+.tap-hint{text-align:center;font-size:13px;color:var(--gold2);margin-top:-6px;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.spinning .caps,.spinning .crank,.tap-hint{animation:none}.dropped .capsule-out{animation:none;opacity:1}}
+
+/* ---------- ticket ---------- */
+.ticket{position:relative;border-radius:18px;padding:0;overflow:hidden;background:linear-gradient(160deg,#2a2113,#141417 60%);border:1px solid rgba(217,171,74,.45);box-shadow:0 20px 50px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.4) inset;animation:pop .5s cubic-bezier(.3,1.4,.5,1)}
+.ticket.big{border-color:var(--gold2);box-shadow:0 0 0 1px rgba(240,210,138,.5),0 20px 60px rgba(217,171,74,.35)}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.ticket .top{padding:18px 18px 14px;border-bottom:1px dashed rgba(217,171,74,.45);position:relative}
+.ticket .top:before,.ticket .top:after{content:"";position:absolute;bottom:-9px;width:18px;height:18px;border-radius:50%;background:var(--bg)}
+.ticket .top:before{left:-9px}.ticket .top:after{right:-9px}
+.ticket .brand{display:flex;justify-content:space-between;align-items:center;font-family:var(--disp);letter-spacing:.2em;font-size:13px;color:var(--gold)}
+.ticket .win{font-size:12px;color:var(--gold2);letter-spacing:.2em;font-family:var(--disp);margin-top:10px}
+.ticket .prize{font-size:30px;font-weight:900;line-height:1.2;margin-top:2px;color:var(--ink);text-wrap:balance}
+.ticket .sub{font-size:13px;color:var(--ink2);margin-top:4px}
+.ticket .bottom{padding:14px 18px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:12px}
+.ticket .bottom .k{color:var(--mute);font-size:10.5px;letter-spacing:.08em}
+.ticket .bottom .v{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.ticket .bottom .code{font-family:var(--disp);font-size:24px;letter-spacing:.12em;color:var(--gold2);line-height:1}
+.ticket .stamp{position:absolute;right:14px;top:14px;width:64px;height:64px;border:2px solid rgba(240,210,138,.7);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:11px;letter-spacing:.1em;color:var(--gold2);transform:rotate(-12deg);text-align:center;line-height:1.1;background:rgba(0,0,0,.25)}
+.ticket .foot{padding:0 18px 14px;font-size:11px;color:var(--mute);line-height:1.5}
+.prize-ico{width:56px;height:56px;flex:none}
+
+/* ---------- admin ---------- */
+.gauge{display:flex;gap:4px;height:12px;border-radius:6px;overflow:hidden;margin:8px 0 6px}
+.gauge i{flex:1;background:var(--card2)}
+.gauge i.on{background:var(--gold)}
+.lvl{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:18px}
+.bars{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+.bar{display:grid;grid-template-columns:118px 1fr 44px;gap:8px;align-items:center;font-size:12.5px}
+.bar .n{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .t{height:10px;background:var(--card2);border-radius:5px;overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--gold);border-radius:5px}
+.bar .p{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums;font-weight:700}
+.bar.capped .t i{background:var(--mute)}
+.bar.capped .n{color:var(--mute);text-decoration:line-through}
+.tbl-wrap{overflow-x:auto;margin:0 -4px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:460px}
+th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle;white-space:nowrap}
+th{font-size:11px;color:var(--mute);font-weight:500;letter-spacing:.04em}
+td input[type=text]{min-width:120px;padding:6px 8px;font-size:13px;border-radius:8px}
+td input[type=number]{width:62px;padding:6px 6px;font-size:13px;border-radius:8px;text-align:right}
+.log{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto}
+.log .it{display:grid;grid-template-columns:1fr auto;gap:4px 10px;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px}
+.log .it.used{opacity:.55}
+.log .it .n{font-weight:700;color:var(--ink)}
+.log .it .m{color:var(--mute);font-size:11.5px;font-variant-numeric:tabular-nums}
+.log .it .pz{color:var(--gold2);font-weight:700}
+.log .it .code{font-family:var(--disp);letter-spacing:.1em;font-size:16px;color:var(--gold2)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line2);background:transparent;color:var(--ink2);border-radius:999px;padding:6px 12px;font:inherit;font-size:12.5px;cursor:pointer}
+.seg button.on{background:var(--gold);color:#1a1200;border-color:var(--gold);font-weight:700}
+.seg button:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
+.mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ms{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.ms .v{font-size:22px;font-weight:900;line-height:1.1}
+.ms .l{font-size:11px;color:var(--mute);margin-top:2px}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--bg2);border:1px solid var(--line);border-radius:10px;font-size:13px}
+.switch input{width:20px;height:20px;accent-color:var(--gold)}
+.status-banner{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--bg2);border:1px solid var(--line);font-size:12.5px;color:var(--ink2);flex-wrap:wrap}
+details summary{cursor:pointer;color:var(--gold2);font-weight:700;font-size:13.5px}
+.gate{max-width:360px;margin:40px auto}
+.err{color:var(--bad);font-size:13px}
+.muted-small{font-size:11px;color:var(--mute)}
+@media (max-width:420px){.bar{grid-template-columns:100px 1fr 40px}.mini-stats{grid-template-columns:repeat(3,1fr)}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="p-pct" viewBox="0 0 64 64"><path d="M14 10h24l16 16v28H14z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="25" cy="30" r="4" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="39" cy="44" r="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M40 28L24 46" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+    <symbol id="p-yen" viewBox="0 0 64 64"><circle cx="32" cy="32" r="24" fill="none" stroke="currentColor" stroke-width="3"/><path d="M22 18l10 14 10-14M32 32v16M23 38h18M23 45h18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="p-bottle" viewBox="0 0 64 64"><path d="M26 6h12v10c0 4 8 7 8 16v24a4 4 0 0 1-4 4H22a4 4 0 0 1-4-4V32c0-9 8-12 8-16z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><rect x="22" y="36" width="20" height="14" rx="2" fill="currentColor" opacity=".35"/><path d="M26 10h12" stroke="currentColor" stroke-width="3"/></symbol>
+    <symbol id="p-shots" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M8 24h14l-2 26H10z"/><path d="M25 24h14l-2 26H27z"/><path d="M42 24h14l-2 26H44z"/></g><g fill="currentColor" opacity=".4"><path d="M10.5 38h9.5l-.8 12H11.5z"/><path d="M27.5 38h9.5l-.8 12H28.5z"/><path d="M44.5 38h9.5l-.8 12H45.5z"/></g><path d="M22 14l4 6M32 10v8M42 14l-4 6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap" id="app">
+  <!-- ================= CUSTOMER VIEW ================= -->
+  <section id="v-gacha">
+    <div class="topbar">
+      <div class="logo">DENSE<small>ROPPONGI · MEMBERS SHISHA BAR</small></div>
+      <span class="pill g" id="g-day">本日限り</span>
+    </div>
+    <div class="eyebrow">TONIGHT'S LUCK</div>
+    <h1>ニックネームを入れて、<br>ガチャを回す。</h1>
+    <p class="lead">当たったクーポンは<b style="color:var(--ink)">スクショして入店時に見せる</b>だけ。1人1日1回、有効期限は本日の営業中。</p>
+
+    <div id="g-stage">
+      <div class="machine-wrap" id="machine">
+        <svg class="machine" viewBox="0 0 300 380" aria-label="カプセルガチャのイラスト">
+          <defs>
+            <radialGradient id="dome" cx="40%" cy="30%" r="70%"><stop offset="0" stop-color="#ffffff" stop-opacity=".22"/><stop offset=".6" stop-color="#ffffff" stop-opacity=".05"/><stop offset="1" stop-color="#000" stop-opacity=".2"/></radialGradient>
+            <linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2a30"/><stop offset="1" stop-color="#121215"/></linearGradient>
+            <linearGradient id="goldg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0d28a"/><stop offset=".5" stop-color="#d9ab4a"/><stop offset="1" stop-color="#9a7430"/></linearGradient>
+            <radialGradient id="glowg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f0d28a" stop-opacity=".55"/><stop offset="1" stop-color="#f0d28a" stop-opacity="0"/></radialGradient>
+            <clipPath id="domeclip"><circle cx="150" cy="118" r="92"/></clipPath>
+          </defs>
+          <ellipse cx="150" cy="364" rx="120" ry="10" fill="#000" opacity=".5"/>
+          <!-- dome -->
+          <circle cx="150" cy="118" r="94" fill="#0b0b0d" stroke="url(#goldg)" stroke-width="3"/>
+          <g class="caps" clip-path="url(#domeclip)">
+            <g id="capsules"></g>
+          </g>
+          <circle cx="150" cy="118" r="92" fill="url(#dome)"/>
+          <path d="M92 70 Q120 36 160 34" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="5" stroke-linecap="round"/>
+          <!-- collar -->
+          <rect x="58" y="200" width="184" height="18" rx="6" fill="url(#goldg)"/>
+          <!-- body -->
+          <rect x="66" y="216" width="168" height="134" rx="14" fill="url(#body)" stroke="rgba(240,210,138,.35)"/>
+          <text x="150" y="243" text-anchor="middle" font-family="Bebas Neue" font-size="22" letter-spacing="5" fill="#f0d28a">DENSE</text>
+          <!-- crank -->
+          <g class="crank">
+            <circle cx="150" cy="258" r="22" fill="#0b0b0d" stroke="url(#goldg)" stroke-width="3"/>
+            <rect x="146" y="238" width="8" height="40" rx="3" fill="url(#goldg)"/>
+            <rect x="130" y="254" width="40" height="8" rx="3" fill="url(#goldg)"/>
+            <circle cx="150" cy="258" r="6" fill="#f0d28a"/>
+          </g>
+          <!-- outlet -->
+          <path d="M108 296 h84 v38 a6 6 0 0 1 -6 6 h-72 a6 6 0 0 1 -6 -6 z" fill="#060607" stroke="rgba(240,210,138,.35)"/>
+          <ellipse class="glow" cx="150" cy="330" rx="60" ry="26" fill="url(#glowg)"/>
+          <g class="capsule-out" id="capsule-out">
+            <circle cx="150" cy="320" r="20" fill="#1b1b1f" stroke="#f0d28a" stroke-width="2"/>
+            <path d="M130 320 a20 20 0 0 1 40 0 z" fill="url(#goldg)"/>
+            <ellipse cx="143" cy="310" rx="5" ry="3" fill="#fff" opacity=".5"/>
+          </g>
+          <!-- feet -->
+          <rect x="80" y="350" width="30" height="10" rx="3" fill="#0b0b0d"/>
+          <rect x="190" y="350" width="30" height="10" rx="3" fill="#0b0b0d"/>
+        </svg>
+      </div>
+      <div class="tap-hint" id="tap-hint" hidden>カプセルをタップして開ける</div>
+
+      <form id="g-form" class="card stack" style="margin-top:8px" autocomplete="off">
+        <div>
+          <label class="f" for="nick">ニックネーム（入店時に伝える名前）</label>
+          <input type="text" id="nick" maxlength="12" placeholder="例：りゅう" required>
+        </div>
+        <button class="btn primary block" id="spin-btn" type="submit">ガチャを回す</button>
+        <p class="note" id="g-note">結果にはニックネーム・日時・確認コードが入ります。スクショの加工は無効です。</p>
+        <p class="err" id="g-err" hidden></p>
+      </form>
+    </div>
+
+    <div id="g-result" hidden class="stack" style="margin-top:12px"></div>
+
+    <p style="text-align:center;margin-top:28px"><a class="hidden-link" href="#admin">店舗用</a></p>
+  </section>
+
+  <!-- ================= ADMIN VIEW ================= -->
+  <section id="v-admin" hidden>
+    <div class="topbar">
+      <div class="logo">DENSE<small>GACHA 管理画面</small></div>
+      <a class="btn ghost sm" href="#">ガチャ画面へ</a>
+    </div>
+    <div id="a-gate" class="gate card stack" hidden>
+      <h2>店舗用 ログイン</h2>
+      <p class="note">PINを入れてください（初期値 2525。管理画面で変更できます）</p>
+      <input type="password" id="pin" inputmode="numeric" placeholder="PIN">
+      <button class="btn primary block" id="pin-btn" type="button">開く</button>
+      <p class="err" id="pin-err" hidden>PINが違います</p>
+    </div>
+    <div id="a-denied" class="gate card" hidden>
+      <h2>管理者のみ</h2>
+      <p class="note">この画面はこのページの編集権限がある人だけ開けます。</p>
+    </div>
+
+    <div id="a-body" class="stack" hidden>
+      <div class="status-banner" id="a-banner"></div>
+
+      <!-- store status -->
+      <div class="card gold">
+        <h2><span class="b">1</span>お店の今の状況</h2>
+        <p class="note" style="margin-bottom:10px">ここで入れた数字と天気から「今夜はどれくらい強いクーポンを出すか」を自動で決めます。お客さんの画面には一切出ません。</p>
+        <div class="row">
+          <div class="col"><label class="f" for="s-res">今日の予約（組）</label><input type="number" id="s-res" min="0" step="1"></div>
+          <div class="col"><label class="f" for="s-guests">今いる来客（人）</label><input type="number" id="s-guests" min="0" step="1"></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div class="col"><label class="f" for="s-base">この曜日のいつもの来客（人）</label><input type="number" id="s-base" min="1" step="1"></div>
+          <div class="col"><label class="f" for="s-weather">天気</label>
+            <select id="s-weather"><option value="sunny">晴れ</option><option value="cloudy">くもり</option><option value="rain">雨</option><option value="snow">雪</option></select></div>
+        </div>
+        <div style="margin-top:12px">
+          <label class="f">手動で切り替える</label>
+          <div class="seg" id="s-override">
+            <button type="button" data-v="auto" class="on">自動</button>
+            <button type="button" data-v="strong">強め</button>
+            <button type="button" data-v="normal">ふつう</button>
+            <button type="button" data-v="weak">控えめ</button>
+            <button type="button" data-v="off">配布停止</button>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <div class="lvl" id="s-level"></div>
+          <div class="gauge" id="s-gauge"><i></i><i></i><i></i></div>
+          <p class="note" id="s-reason"></p>
+        </div>
+        <div style="margin-top:12px">
+          <div class="note" style="margin-bottom:4px"><b>いま配布中の確率</b>（上限に達した景品は出ません）</div>
+          <div class="bars" id="s-bars"></div>
+        </div>
+        <button class="btn primary block" id="s-save" type="button" style="margin-top:14px">保存して反映</button>
+      </div>
+
+      <!-- today -->
+      <div class="card">
+        <h2><span class="b">2</span>今日の配布状況</h2>
+        <div class="mini-stats">
+          <div class="ms"><div class="v" id="t-total">0</div><div class="l">本日のガチャ回数</div></div>
+          <div class="ms"><div class="v" id="t-big">0</div><div class="l">大当たり（ボトル等）</div></div>
+          <div class="ms"><div class="v" id="t-used">0</div><div class="l">来店・使用済み</div></div>
+        </div>
+        <div class="bars" id="t-caps" style="margin-top:12px"></div>
+      </div>
+
+      <!-- log -->
+      <div class="card">
+        <h2><span class="b">3</span>誰に何が出たか（結果ログ）</h2>
+        <p class="note" style="margin-bottom:8px">スクショを見せられたら、ニックネームか確認コードで検索。合っていたら「使用済み」にしてください。</p>
+        <input type="text" id="l-q" placeholder="ニックネーム or コードで検索">
+        <div class="seg" style="margin:8px 0"><button type="button" data-f="today" class="on">今日</button><button type="button" data-f="all">すべて</button></div>
+        <div class="log" id="l-list"></div>
+      </div>
+
+      <!-- prizes -->
+      <div class="card">
+        <h2><span class="b">4</span>景品と確率の設定</h2>
+        <p class="note" style="margin-bottom:8px">数字は「重み」。大きいほど出やすい。上限は1営業日に出す最大枚数（0＝無制限）。</p>
+        <div class="tbl-wrap"><table id="p-table">
+          <thead><tr><th>景品</th><th>ひとこと</th><th>控えめ</th><th>ふつう</th><th>強め</th><th>上限/日</th><th>大当たり</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn ghost sm" id="p-add" type="button">＋ 景品を追加</button>
+          <button class="btn primary sm" id="p-save" type="button">景品設定を保存</button>
+        </div>
+      </div>
+
+      <!-- settings -->
+      <div class="card">
+        <h2><span class="b">5</span>その他の設定</h2>
+        <div class="stack">
+          <div class="row">
+            <div class="col"><label class="f" for="o-total">1営業日の配布上限（枚）</label><input type="number" id="o-total" min="1" step="1"></div>
+            <div class="col"><label class="f" for="o-group">予約1組あたりの平均人数</label><input type="number" id="o-group" min="1" step="0.5"></div>
+          </div>
+          <div class="row">
+            <div class="col"><label class="f" for="o-strong">「強め」にする基準（見込み÷いつも が この% 未満）</label><input type="number" id="o-strong" min="1" max="100" step="1"></div>
+            <div class="col"><label class="f" for="o-weak">「控えめ」にする基準（この% 以上）</label><input type="number" id="o-weak" min="1" max="200" step="1"></div>
+          </div>
+          <label class="switch"><span>同じ人が1日に何回も回せる（テスト用）</span><input type="checkbox" id="o-repeat"></label>
+          <div class="row">
+            <div class="col"><label class="f" for="o-pin">管理画面のPIN</label><input type="text" id="o-pin" inputmode="numeric" maxlength="8"></div>
+            <div class="col"><label class="f" for="o-msg">配布停止中に出すメッセージ</label><input type="text" id="o-msg"></div>
+          </div>
+          <button class="btn primary sm" id="o-save" type="button">設定を保存</button>
+          <div class="row">
+            <button class="btn ghost sm" id="o-copy" type="button">ガチャ画面のURLをコピー（ストーリーズ用）</button>
+            <button class="btn danger sm" id="o-reset" type="button">今日のログをすべて削除</button>
+          </div>
+          <p class="note" id="o-reset-note" hidden>本当に削除しますか？ <button class="btn danger sm" id="o-reset-yes" type="button">削除する</button> <button class="btn ghost sm" id="o-reset-no" type="button">やめる</button></p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const JST = 'Asia/Tokyo';
+const LEVELS = { strong:'強め', normal:'ふつう', weak:'控えめ', off:'配布停止' };
+const LIDX = { weak:0, normal:1, strong:2 };
+
+/* ---------- defaults ---------- */
+const DEFAULT_PRIZES = [
+  { id:'p5',   name:'5% OFF',            sub:'お会計から5%引き',          w:[55,30,10], cap:0,  big:false, ico:'p-pct' },
+  { id:'p10',  name:'10% OFF',           sub:'お会計から10%引き',         w:[30,30,15], cap:0,  big:false, ico:'p-pct' },
+  { id:'y1000',name:'1,000円 OFF',       sub:'お会計から1,000円引き',     w:[10,22,25], cap:0,  big:false, ico:'p-yen' },
+  { id:'y1500',name:'1,500円 OFF',       sub:'お会計から1,500円引き',     w:[4,12,25],  cap:10, big:false, ico:'p-yen' },
+  { id:'btl',  name:'焼酎ボトル1本 無料', sub:'対象の焼酎ボトル1本をサービス', w:[1,5,18], cap:3, big:true, ico:'p-bottle' },
+  { id:'teq',  name:'テキーラ30杯 サービス', sub:'グループで30ショットまで',  w:[0,1,7],    cap:1,  big:true,  ico:'p-shots' },
+];
+const DEFAULT_PUBLIC = { prizes: DEFAULT_PRIZES, level:'normal', enabled:true, closedMsg:'本日のガチャはお休みです。また次回！', dailyTotalCap:60, allowRepeat:false, salt:'dense-2026', updatedAt:0 };
+const DEFAULT_PRIVATE = { reservations:0, guests:0, baseline:20, weather:'sunny', override:'auto', groupSize:2.5, strongPct:50, weakPct:90, pin:'2525' };
+const WEATHER = { sunny:{f:1, t:'晴れ'}, cloudy:{f:.95, t:'くもり'}, rain:{f:.8, t:'雨'}, snow:{f:.7, t:'雪'} };
+
+/* ---------- time (always JST) ---------- */
+function parts(d){ const f=new Intl.DateTimeFormat('ja-JP',{timeZone:JST,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',weekday:'short',hourCycle:'h23'}); return Object.fromEntries(f.formatToParts(d).map(x=>[x.type,x.value])); }
+function bizDay(d=new Date()){ const p=parts(new Date(d.getTime()-6*3600e3)); return `${p.year}-${p.month}-${p.day}`; }
+function fmtTs(ms){ const p=parts(new Date(ms)); return `${p.year}/${p.month}/${p.day} ${p.hour}:${p.minute}:${p.second}（${p.weekday}）`; }
+function fmtDayJa(day){ const [y,m,d]=day.split('-'); return `${y}年${+m}月${+d}日`; }
+
+/* ---------- code ---------- */
+async function makeCode(str){
+  let hex;
+  try{ const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)); hex=[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+  catch(e){ let h1=0x811c9dc5,h2=0x01000193; for(const ch of str){ const c=ch.codePointAt(0); h1=Math.imul(h1^c,16777619)>>>0; h2=Math.imul(h2+c,2654435761)>>>0; } hex=(h1.toString(16).padStart(8,'0')+h2.toString(16).padStart(8,'0')).repeat(4); }
+  const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let out='';
+  for(let i=0;i<6;i++){ out+=A[parseInt(hex.slice(i*2,i*2+2),16)%32]; }
+  return 'DNS-'+out;
+}
+const uid8 = () => Math.random().toString(36).slice(2,10);
+
+/* ---------- storage: shared db when available, else this device ---------- */
+const LS = {
+  get(k, d){ try{ const v=localStorage.getItem('dg_'+k); return v?JSON.parse(v):d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('dg_'+k, JSON.stringify(v)); }catch(e){} },
+};
+const Store = {
+  mode:'local', db:null, user:null, uid:null, isAdmin:false, ready:null,
+  async init(){
+    this.ready = (async () => {
+      try{
+        if (window.claude && typeof window.claude.use === 'function'){
+          const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+          if (db){
+            this.db = db; this.user = user; this.mode = 'db';
+            this.uid = user ? await user.id() : null;
+            this.isAdmin = user ? await user.canEdit() : false;
+          }
+        }
+      }catch(e){ console.warn('capability init failed', e); }
+      return this.mode;
+    })();
+    return this.ready;
+  },
+  normPub(d){ const p={...DEFAULT_PUBLIC, ...(d||{})}; if(!Array.isArray(p.prizes)||!p.prizes.length) p.prizes=DEFAULT_PRIZES; return p; },
+  async getPublic(){ if(this.mode==='db'){ const s=await this.db.doc('config/public').get(); return this.normPub(s.exists?s.data():null); } return this.normPub(LS.get('public',null)); },
+  async setPublic(p){ p={...p, updatedAt:Date.now()}; if(this.mode==='db'){ await this.db.doc('config/public').set(p); } else LS.set('public',p); return p; },
+  async getPrivate(){ let d=null; if(this.mode==='db'){ const s=await this.db.doc('config/private').get(); d=s.exists?s.data():null; } else d=LS.get('private',null); return {...DEFAULT_PRIVATE, ...(d||{})}; },
+  async setPrivate(p){ if(this.mode==='db'){ await this.db.doc('config/private').set(p); } else LS.set('private',p); },
+  async getCounters(day){ let d=null; if(this.mode==='db'){ const s=await this.db.doc('counters/'+day).get(); d=s.exists?s.data():null; } else d=LS.get('counters_'+day,null); return {counts:{}, total:0, ...(d||{})}; },
+  async setCounters(day,c){ if(this.mode==='db'){ await this.db.doc('counters/'+day).set(c); } else LS.set('counters_'+day,c); },
+  // spins: db mode = one doc per viewer (spins/<uid>) with an entries array; local = one array
+  async getMySpins(){ if(this.mode==='db'){ if(!this.uid) return []; const s=await this.db.doc('spins/'+this.uid).get(); return s.exists?(s.data().entries||[]):[]; } return LS.get('spins',[]); },
+  async addMySpin(e){
+    if(this.mode==='db'){ if(!this.uid) throw new Error('no-id'); const ref=this.db.doc('spins/'+this.uid); const s=await ref.get(); const entries=s.exists?[...(s.data().entries||[])]:[]; entries.push(e); await ref.set({entries, uid:this.uid}); }
+    else { const a=LS.get('spins',[]); a.push(e); LS.set('spins',a); }
+  },
+  async getAllSpins(){ if(this.mode==='db'){ const q=await this.db.collection('spins').get(); const out=[]; q.docs.forEach(d=>{ const b=d.data()||{}; (b.entries||[]).forEach(e=>out.push({...e, uid:d.id})); }); return out; } return LS.get('spins',[]).map(e=>({...e, uid:'local'})); },
+  subscribeAllSpins(cb){
+    if(this.mode==='db'){ return this.db.collection('spins').onSnapshot(q=>{ const out=[]; q.docs.forEach(d=>{ const b=d.data()||{}; (b.entries||[]).forEach(e=>out.push({...e, uid:d.id})); }); cb(out); }, err=>console.warn('spins listener', err)); }
+    const h=()=>cb(LS.get('spins',[]).map(e=>({...e, uid:'local'}))); window.addEventListener('storage',h); h(); return ()=>window.removeEventListener('storage',h);
+  },
+  async setSpinUsed(uid, id, used){
+    if(this.mode==='db'){ const ref=this.db.doc('spins/'+uid); const s=await ref.get(); if(!s.exists) return; const entries=(s.data().entries||[]).map(e=>e.id===id?{...e, used}:e); await ref.set({...s.data(), entries}); }
+    else { LS.set('spins', LS.get('spins',[]).map(e=>e.id===id?{...e, used}:e)); }
+  },
+  async deleteDay(day){
+    if(this.mode==='db'){ const q=await this.db.collection('spins').get(); for(const d of q.docs){ const b=d.data()||{}; const entries=(b.entries||[]).filter(e=>e.day!==day); if(entries.length!==(b.entries||[]).length) await this.db.doc('spins/'+d.id).set({...b, entries}); } await this.db.doc('counters/'+day).set({counts:{}, total:0}); }
+    else { LS.set('spins', LS.get('spins',[]).filter(e=>e.day!==day)); LS.set('counters_'+day,{counts:{},total:0}); }
+  },
+};
+
+/* ---------- level logic ---------- */
+function computeLevel(st){
+  if(st.override && st.override!=='auto') return { level:st.override, reason: st.override==='off' ? '手動で「配布停止」にしています' : `手動で「${LEVELS[st.override]}」にしています` };
+  const w=WEATHER[st.weather]||WEATHER.sunny;
+  const expect=(Number(st.reservations)||0)*(Number(st.groupSize)||2.5)+(Number(st.guests)||0);
+  const base=Math.max(1, Number(st.baseline)||1);
+  const ratio=expect*w.f/base;
+  const pct=Math.round(ratio*100);
+  let level='normal';
+  if(pct < (Number(st.strongPct)||50)) level='strong';
+  else if(pct >= (Number(st.weakPct)||90)) level='weak';
+  const reason=`見込み ${expect.toFixed(0)}人（予約${st.reservations||0}組×${st.groupSize||2.5}人＋来客${st.guests||0}人）× 天気${w.t}（×${w.f}）÷ いつも${base}人 ＝ ${pct}%`;
+  return { level, reason, pct };
+}
+function activePrizes(pub, counters){
+  return pub.prizes.filter(p=>p.enabled!==false).map(p=>{ const n=(counters.counts||{})[p.id]||0; const capped=p.cap>0 && n>=p.cap; return {...p, n, capped}; });
+}
+function probTable(pub, counters, level){
+  const i=LIDX[level]; if(i===undefined) return [];
+  const list=activePrizes(pub,counters);
+  const tot=list.reduce((s,p)=>s+(p.capped?0:(Number(p.w[i])||0)),0);
+  return list.map(p=>({...p, pct: tot? Math.round(((p.capped?0:(Number(p.w[i])||0))/tot)*100):0}));
+}
+function pickPrize(pub, counters, level){
+  const i=LIDX[level]; const list=activePrizes(pub,counters).filter(p=>!p.capped);
+  const weighted=list.map(p=>({p, w:Math.max(0, Number(p.w[i])||0)}));
+  const tot=weighted.reduce((s,x)=>s+x.w,0);
+  if(!tot) return list[0]||null;
+  let r=Math.random()*tot;
+  for(const x of weighted){ r-=x.w; if(r<0) return x.p; }
+  return weighted[weighted.length-1].p;
+}
+
+/* ---------- toast ---------- */
+let toastT; function toast(msg){ let t=$('.toast'); if(!t){ t=document.createElement('div'); t.className='toast'; document.body.appendChild(t);} t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{t.hidden=true;},2200); }
+
+/* ---------- capsules in the dome ---------- */
+(function drawCapsules(){
+  const g=$('#capsules'); const cols=['#d9ab4a','#f0d28a','#3a3a44','#8a6a2a','#2a2a30','#c98500'];
+  const pts=[[95,150],[125,160],[158,165],[190,150],[215,130],[110,120],[145,135],[180,120],[130,95],[165,100],[200,95],[150,70],[115,80],[185,80]];
+  let s='';
+  pts.forEach(([x,y],k)=>{ const c=cols[k%cols.length]; const r=15+(k%3)*2; s+=`<g transform="rotate(${(k*47)%360} ${x} ${y})"><circle cx="${x}" cy="${y}" r="${r}" fill="#1b1b1f" stroke="rgba(255,255,255,.12)"/><path d="M${x-r} ${y} a${r} ${r} 0 0 1 ${2*r} 0 z" fill="${c}"/><ellipse cx="${x-r*.3}" cy="${y-r*.45}" rx="${r*.25}" ry="${r*.15}" fill="#fff" opacity=".45"/></g>`; });
+  g.innerHTML=s;
+})();
+
+/* ================= CUSTOMER ================= */
+const G = {
+  pub:null, busy:false,
+  async init(){
+    $('#g-day').textContent = fmtDayJa(bizDay()) + ' 限り';
+    $('#g-form').addEventListener('submit', e=>{ e.preventDefault(); G.spin(); });
+    const saved=LS.get('nick',''); if(saved) $('#nick').value=saved;
+  },
+  showErr(m){ const el=$('#g-err'); el.textContent=m; el.hidden=!m; },
+  async spin(){
+    if(this.busy) return;
+    const nick=$('#nick').value.trim();
+    if(!nick){ this.showErr('ニックネームを入れてください'); return; }
+    this.showErr('');
+    this.busy=true; const btn=$('#spin-btn'); btn.disabled=true; btn.textContent='準備中…';
+    try{
+      await Store.ready;
+      const pub=await Store.getPublic();
+      const day=bizDay();
+      if(!pub.enabled || pub.level==='off'){ this.showErr(pub.closedMsg||'本日のガチャはお休みです'); return; }
+      const mine=await Store.getMySpins();
+      const prev=mine.filter(e=>e.day===day && (Store.mode==='db' || e.nick===nick)).sort((a,b)=>b.ts-a.ts)[0];
+      if(prev && !pub.allowRepeat){ this.renderTicket(prev, pub, true); return; }
+      const counters=await Store.getCounters(day);
+      if(pub.dailyTotalCap>0 && (counters.total||0)>=pub.dailyTotalCap){ this.showErr('本日分のクーポンは配布終了しました。また次回！'); return; }
+      const prize=pickPrize(pub, counters, pub.level);
+      if(!prize){ this.showErr('ただいま配布できる景品がありません'); return; }
+      const ts=Date.now();
+      const code=await makeCode(`${pub.salt}|${nick}|${ts}|${prize.id}`);
+      const entry={ id:uid8(), nick, prizeId:prize.id, prize:prize.name, sub:prize.sub||'', big:!!prize.big, ico:prize.ico||'p-pct', ts, day, code, used:false, level:pub.level };
+      // animation
+      btn.textContent='回しています…';
+      const m=$('#machine'); m.classList.remove('dropped','opened'); m.classList.add('spinning');
+      await wait(1700);
+      m.classList.remove('spinning'); m.classList.add('dropped');
+      // record first, then let them open the capsule
+      await Store.addMySpin(entry);
+      const c2=await Store.getCounters(day); c2.counts=c2.counts||{}; c2.counts[prize.id]=(c2.counts[prize.id]||0)+1; c2.total=(c2.total||0)+1; await Store.setCounters(day,c2);
+      LS.set('nick', nick);
+      $('#tap-hint').hidden=false;
+      const open=()=>{ $('#capsule-out').removeEventListener('click',open); $('#tap-hint').removeEventListener('click',open); $('#tap-hint').hidden=true; m.classList.add('opened'); this.renderTicket(entry, pub, false); };
+      $('#capsule-out').addEventListener('click',open); $('#tap-hint').addEventListener('click',open);
+      $('#capsule-out').style.cursor='pointer';
+      setTimeout(()=>{ if(!m.classList.contains('opened')) open(); }, 6000);
+    }catch(err){ console.error(err);
+      const perm = Store.mode==='db' && (err && (err.code==='invalid_argument' || err.message==='no-id'));
+      this.showErr(perm ? 'このお試し版では、店舗アカウントでログインした端末だけ回せます。本番公開時はどなたでも回せるようになります。' : 'うまく回せませんでした。電波の良いところでもう一度お試しください。'); }
+    finally{ this.busy=false; btn.disabled=false; btn.textContent='ガチャを回す'; }
+  },
+  renderTicket(e, pub, again){
+    const r=$('#g-result'); r.hidden=false;
+    $('#g-stage').hidden=true;
+    r.innerHTML=`
+      ${again?'<p class="note" style="text-align:center">今日はもう回しています。本日の結果はこちら。</p>':''}
+      <div class="ticket ${e.big?'big':''}">
+        <div class="stamp">${e.big?'BIG<br>WIN':'LUCKY'}</div>
+        <div class="top">
+          <div class="brand"><span>DENSE ROPPONGI</span></div>
+          <div class="win">${e.big?'大当たり！':'当たり'}</div>
+          <div style="display:flex;gap:14px;align-items:center">
+            <svg class="prize-ico" style="color:var(--gold2)"><use href="#${esc(e.ico||'p-pct')}"/></svg>
+            <div><div class="prize">${esc(e.prize)}</div><div class="sub">${esc(e.sub||'')}</div></div>
+          </div>
+        </div>
+        <div class="bottom">
+          <div><div class="k">NICKNAME</div><div class="v">${esc(e.nick)}</div></div>
+          <div><div class="k">DATE / TIME</div><div class="v">${fmtTs(e.ts)}</div></div>
+          <div><div class="k">CODE</div><div class="code">${esc(e.code)}</div></div>
+          <div><div class="k">VALID</div><div class="v">${fmtDayJa(e.day)} 営業中のみ</div></div>
+        </div>
+        <div class="foot">この画面をスクショして、入店時にスタッフへ見せてください。ニックネーム・日時・コードはお店側の記録と照合します。ほかのクーポンとの併用不可。</div>
+      </div>
+      <p class="note" style="text-align:center">六本木 DENSE ／ Instagram @dense_roppongi</p>
+      <button class="btn ghost block" type="button" id="g-back">閉じる</button>`;
+    $('#g-back').addEventListener('click',()=>{ r.hidden=true; $('#g-stage').hidden=false; const m=$('#machine'); m.classList.remove('dropped','opened','spinning'); });
+    r.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+};
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ================= ADMIN ================= */
+const A = {
+  pub:null, priv:null, spins:[], unsub:null, filter:'today', inited:false, counters:{counts:{},total:0},
+  async open(){
+    await Store.ready;
+    $('#a-gate').hidden=true; $('#a-denied').hidden=true; $('#a-body').hidden=true;
+    if(Store.mode==='db'){ if(Store.isAdmin) await this.enter(); else $('#a-denied').hidden=false; return; }
+    if(sessionStorage.getItem('dg_admin')==='1'){ await this.enter(); return; }
+    $('#a-gate').hidden=false;
+    $('#pin-btn').onclick=async()=>{ const priv=await Store.getPrivate(); if($('#pin').value===String(priv.pin||'2525')){ sessionStorage.setItem('dg_admin','1'); $('#pin-err').hidden=true; await this.enter(); } else $('#pin-err').hidden=false; };
+  },
+  async enter(){
+    $('#a-gate').hidden=true; $('#a-body').hidden=false;
+    this.pub=await Store.getPublic(); this.priv=await Store.getPrivate();
+    this.counters=await Store.getCounters(bizDay());
+    this.fillForms(); this.renderLevel(); this.renderPrizes(); this.renderBanner();
+    if(!this.inited){ this.bind(); this.inited=true; }
+    if(this.unsub) this.unsub();
+    this.unsub=Store.subscribeAllSpins(list=>{ this.spins=list; this.renderToday(); this.renderLog(); });
+  },
+  renderBanner(){
+    const b=$('#a-banner'); const day=fmtDayJa(bizDay());
+    const where = Store.mode==='db' ? '<span class="pill ok">共有データ（全端末で同じ）</span>' : '<span class="pill warn">この端末だけに保存（お試しモード）</span>';
+    b.innerHTML=`<span>営業日 <b>${day}</b>（朝6時で切り替わります）</span>${where}<span class="pill ${this.pub.level==='off'?'bad':'g'}">配布：${LEVELS[this.pub.level]||this.pub.level}</span>`;
+  },
+  fillForms(){
+    const p=this.priv, u=this.pub;
+    $('#s-res').value=p.reservations; $('#s-guests').value=p.guests; $('#s-base').value=p.baseline; $('#s-weather').value=p.weather;
+    $$('#s-override button').forEach(b=>b.classList.toggle('on', b.dataset.v===p.override));
+    $('#o-total').value=u.dailyTotalCap; $('#o-group').value=p.groupSize; $('#o-strong').value=p.strongPct; $('#o-weak').value=p.weakPct;
+    $('#o-repeat').checked=!!u.allowRepeat; $('#o-pin').value=p.pin||'2525'; $('#o-msg').value=u.closedMsg||'';
+  },
+  readStatus(){
+    return {...this.priv, reservations:+$('#s-res').value||0, guests:+$('#s-guests').value||0, baseline:+$('#s-base').value||1, weather:$('#s-weather').value, override:($('#s-override .on')||{}).dataset?.v||'auto', groupSize:+$('#o-group').value||2.5, strongPct:+$('#o-strong').value||50, weakPct:+$('#o-weak').value||90, pin:$('#o-pin').value||'2525'};
+  },
+  renderLevel(){
+    const st=this.readStatus(); const r=computeLevel(st);
+    const lv=$('#s-level'); const colors={strong:'var(--ok)',normal:'var(--gold2)',weak:'var(--warn)',off:'var(--bad)'};
+    lv.innerHTML=`<span style="color:${colors[r.level]}">今夜のクーポン：${LEVELS[r.level]}</span>`;
+    const on={strong:3,normal:2,weak:1,off:0}[r.level];
+    $$('#s-gauge i').forEach((i,k)=>i.classList.toggle('on',k<on));
+    $('#s-reason').textContent=r.reason+(r.level==='strong'?' → 空いているので強めに配る':r.level==='weak'?' → 入りが良いので控えめに':r.level==='normal'?' → ふつう':'');
+    const bars=$('#s-bars');
+    if(r.level==='off'){ bars.innerHTML='<p class="note">配布停止中。お客さんの画面には「'+esc(this.pub.closedMsg)+'」と出ます。</p>'; return; }
+    const tbl=probTable(this.pub, this.counters, r.level);
+    bars.innerHTML=tbl.map(p=>`<div class="bar ${p.capped?'capped':''}"><span class="n">${esc(p.name)}</span><span class="t"><i style="width:${p.pct}%"></i></span><span class="p">${p.capped?'上限':p.pct+'%'}</span></div>`).join('');
+  },
+  renderToday(){
+    const day=bizDay(); const t=this.spins.filter(e=>e.day===day);
+    $('#t-total').textContent=t.length; $('#t-big').textContent=t.filter(e=>e.big).length; $('#t-used').textContent=t.filter(e=>e.used).length;
+    const caps=$('#t-caps');
+    caps.innerHTML=this.pub.prizes.map(p=>{ const n=t.filter(e=>e.prizeId===p.id).length; const cap=p.cap>0?p.cap:0; const pct=cap?Math.min(100,Math.round(n/cap*100)):Math.min(100,n*5); return `<div class="bar ${cap&&n>=cap?'capped':''}"><span class="n">${esc(p.name)}</span><span class="t"><i style="width:${pct}%"></i></span><span class="p">${n}${cap?'/'+cap:'枚'}</span></div>`; }).join('');
+    // keep local counters in sync with the log for the probability preview
+    const counts={}; t.forEach(e=>{counts[e.prizeId]=(counts[e.prizeId]||0)+1;}); this.counters={counts,total:t.length}; this.renderLevel();
+  },
+  renderLog(){
+    const q=($('#l-q').value||'').trim().toLowerCase(); const day=bizDay();
+    let list=this.spins.slice().sort((a,b)=>b.ts-a.ts);
+    if(this.filter==='today') list=list.filter(e=>e.day===day);
+    if(q) list=list.filter(e=>(e.nick||'').toLowerCase().includes(q)||(e.code||'').toLowerCase().includes(q));
+    const el=$('#l-list');
+    if(!list.length){ el.innerHTML='<p class="note">まだ結果がありません。ガチャ画面で回すと、ここにリアルタイムで並びます。</p>'; return; }
+    el.innerHTML=list.slice(0,200).map(e=>`<div class="it ${e.used?'used':''}">
+      <div><span class="n">${esc(e.nick)}</span> <span class="pz">${e.big?'★ ':''}${esc(e.prize)}</span><div class="m">${fmtTs(e.ts)}　配布：${LEVELS[e.level]||''}</div></div>
+      <div style="text-align:right"><div class="code">${esc(e.code)}</div><button class="btn ${e.used?'ghost':'primary'} sm" data-used="${e.used?0:1}" data-id="${esc(e.id)}" data-uid="${esc(e.uid)}" type="button">${e.used?'未使用に戻す':'使用済みにする'}</button></div>
+    </div>`).join('');
+  },
+  renderPrizes(){
+    const tb=$('#p-table tbody');
+    tb.innerHTML=this.pub.prizes.map((p,i)=>`<tr data-i="${i}">
+      <td><input type="text" class="pn" value="${esc(p.name)}"></td>
+      <td><input type="text" class="ps" value="${esc(p.sub||'')}"></td>
+      <td><input type="number" class="w0" min="0" value="${+p.w[0]||0}"></td>
+      <td><input type="number" class="w1" min="0" value="${+p.w[1]||0}"></td>
+      <td><input type="number" class="w2" min="0" value="${+p.w[2]||0}"></td>
+      <td><input type="number" class="pc" min="0" value="${+p.cap||0}"></td>
+      <td><input type="checkbox" class="pb" ${p.big?'checked':''} style="accent-color:var(--gold);width:18px;height:18px"></td>
+      <td><button class="btn ghost sm pdel" type="button">削除</button></td>
+    </tr>`).join('');
+  },
+  readPrizes(){
+    return $$('#p-table tbody tr').map((tr,i)=>{ const old=this.pub.prizes[i]||{}; const name=$('.pn',tr).value.trim()||('景品'+(i+1)); const big=$('.pb',tr).checked; return { id: old.id || ('x'+uid8()), name, sub:$('.ps',tr).value.trim(), w:[+$('.w0',tr).value||0,+$('.w1',tr).value||0,+$('.w2',tr).value||0], cap:+$('.pc',tr).value||0, big, ico: old.ico || (big?'p-bottle':'p-pct'), enabled:true }; });
+  },
+  bind(){
+    $$('#s-override button').forEach(b=>b.addEventListener('click',()=>{ $$('#s-override button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); this.renderLevel(); }));
+    ['#s-res','#s-guests','#s-base','#s-weather','#o-group','#o-strong','#o-weak'].forEach(s=>$(s).addEventListener('input',()=>this.renderLevel()));
+    $('#s-save').addEventListener('click',async()=>{ try{ this.priv=this.readStatus(); await Store.setPrivate(this.priv); const r=computeLevel(this.priv); this.pub=await Store.setPublic({...this.pub, level:r.level, enabled:r.level!=='off'}); this.renderBanner(); toast('反映しました：'+LEVELS[r.level]); }catch(e){ console.error(e); toast('保存できませんでした'); } });
+    $('#p-add').addEventListener('click',()=>{ this.pub={...this.pub, prizes:[...this.readPrizes(), {id:'x'+uid8(), name:'新しい景品', sub:'', w:[10,10,10], cap:0, big:false, ico:'p-pct', enabled:true}]}; this.renderPrizes(); });
+    $('#p-table').addEventListener('click',e=>{ const b=e.target.closest('.pdel'); if(!b) return; const tr=b.closest('tr'); const list=this.readPrizes(); list.splice(+tr.dataset.i,1); this.pub={...this.pub, prizes:list}; this.renderPrizes(); });
+    $('#p-save').addEventListener('click',async()=>{ try{ this.pub=await Store.setPublic({...this.pub, prizes:this.readPrizes()}); this.renderPrizes(); this.renderLevel(); this.renderToday(); toast('景品設定を保存しました'); }catch(e){ console.error(e); toast('保存できませんでした'); } });
+    $('#o-save').addEventListener('click',async()=>{ try{ this.priv=this.readStatus(); await Store.setPrivate(this.priv); this.pub=await Store.setPublic({...this.pub, dailyTotalCap:+$('#o-total').value||60, allowRepeat:$('#o-repeat').checked, closedMsg:$('#o-msg').value.trim()||DEFAULT_PUBLIC.closedMsg}); this.renderBanner(); toast('設定を保存しました'); }catch(e){ console.error(e); toast('保存できませんでした'); } });
+    $('#l-q').addEventListener('input',()=>this.renderLog());
+    $$('.seg [data-f]').forEach(b=>b.addEventListener('click',()=>{ $$('.seg [data-f]').forEach(x=>x.classList.remove('on')); b.classList.add('on'); this.filter=b.dataset.f; this.renderLog(); }));
+    $('#l-list').addEventListener('click',async e=>{ const b=e.target.closest('button[data-id]'); if(!b) return; b.disabled=true; try{ await Store.setSpinUsed(b.dataset.uid, b.dataset.id, b.dataset.used==='1'); if(Store.mode!=='db'){ this.spins=await Store.getAllSpins(); this.renderToday(); this.renderLog(); } toast(b.dataset.used==='1'?'使用済みにしました':'未使用に戻しました'); }catch(err){ console.error(err); toast('更新できませんでした'); b.disabled=false; } });
+    $('#o-copy').addEventListener('click',async()=>{ const url=location.href.split('#')[0]; try{ await navigator.clipboard.writeText(url); toast('URLをコピーしました'); }catch(e){ const i=document.createElement('input'); i.value=url; document.body.appendChild(i); i.select(); toast('長押しでコピーしてください：'+url); setTimeout(()=>i.remove(),4000); } });
+    $('#o-reset').addEventListener('click',()=>{ $('#o-reset-note').hidden=false; });
+    $('#o-reset-no').addEventListener('click',()=>{ $('#o-reset-note').hidden=true; });
+    $('#o-reset-yes').addEventListener('click',async()=>{ try{ await Store.deleteDay(bizDay()); $('#o-reset-note').hidden=true; if(Store.mode!=='db'){ this.spins=await Store.getAllSpins(); this.renderToday(); this.renderLog(); } toast('今日のログを削除しました'); }catch(e){ console.error(e); toast('削除できませんでした'); } });
+  }
+};
+
+/* ---------- routing ---------- */
+function route(){
+  const admin = location.hash.replace('#','')==='admin';
+  $('#v-gacha').hidden=admin; $('#v-admin').hidden=!admin;
+  if(admin) A.open();
+  window.scrollTo(0,0);
+}
+Store.init();
+G.init();
+window.addEventListener('hashchange', route);
+route();
+})();
+</script>
