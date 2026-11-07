@@ -21,7 +21,7 @@
   ];
   var DEFAULT_SETTINGS = {
     prizes: DEFAULT_PRIZES,
-    default_level: 'normal',       // その日の設定がないときの強さ
+    default_level: 'strong',       // その日の設定がないときの強さ（初期値は強め）
     daily_total_cap: 60,           // 1営業日の配布上限（枚）
     allow_repeat: false,           // 同じ人が何回も回せる（テスト用）
     closed_msg: '本日のガチャはお休みです。また次回！',
@@ -73,7 +73,7 @@
     for (k in (s || {})) if (s[k] !== undefined) out[k] = s[k];
     if (!Array.isArray(out.prizes) || !out.prizes.length) out.prizes = DEFAULT_PRIZES;
     out.prizes = out.prizes.map(normalizePrize);
-    if (!LEVELS[out.default_level]) out.default_level = 'normal';
+    if (!LEVELS[out.default_level]) out.default_level = 'strong';
     out.daily_total_cap = Math.max(0, Math.floor(num(out.daily_total_cap, 60)));
     out.allow_repeat = !!out.allow_repeat;
     out.closed_msg = String(out.closed_msg || DEFAULT_SETTINGS.closed_msg).slice(0, 120);
