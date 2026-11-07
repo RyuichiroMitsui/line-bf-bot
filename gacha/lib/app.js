@@ -16,7 +16,8 @@ function createApp(opts = {}) {
   const SECRET = process.env.SESSION_SECRET || process.env.ADMIN_PASSWORD || 'dev-secret-change-me';
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
   const CUTOFF = Number(process.env.BUSINESS_DAY_CUTOFF_HOUR ?? 6);
-  const IP_DAILY_LIMIT = Number(process.env.IP_DAILY_LIMIT || 40);
+  // 店内Wi-Fiは全員同じIPになるので、ゆるめ（0で無効）
+  const IP_DAILY_LIMIT = Number(process.env.IP_DAILY_LIMIT || 200);
 
   const app = express();
   app.set('trust proxy', true);
