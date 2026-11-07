@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0d0d0f">
+<title>DENSE ガチャ 管理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Bebas+Neue&display=swap">
+<link rel="stylesheet" href="/assets/app.css">
+<style>
+.gate{max-width:360px;margin:40px auto}
+.status-banner{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:var(--bg2);border:1px solid var(--line);font-size:12.5px;color:var(--ink2);flex-wrap:wrap}
+.daynav{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.daynav input[type=date]{flex:1 1 150px;min-width:150px}
+.gauge{display:flex;gap:4px;height:12px;border-radius:6px;overflow:hidden;margin:8px 0 6px}
+.gauge i{flex:1;background:var(--card2)}
+.gauge i.on{background:var(--gold)}
+.lvl{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:18px}
+.bars{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+.bar{display:grid;grid-template-columns:118px 1fr 48px;gap:8px;align-items:center;font-size:12.5px}
+.bar .n{color:var(--ink2);line-height:1.25;font-size:12px}
+.bar .t{height:10px;background:var(--card2);border-radius:5px;overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--gold);border-radius:5px}
+.bar .p{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums;font-weight:700}
+.bar.capped .t i{background:var(--mute)}
+.bar.capped .n{color:var(--mute);text-decoration:line-through}
+.tbl-wrap{overflow-x:auto;margin:0 -4px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle;white-space:nowrap}
+th{font-size:11px;color:var(--mute);font-weight:500;letter-spacing:.04em}
+td input[type=text]{min-width:120px;padding:6px 8px;font-size:13px;border-radius:8px;min-height:36px}
+td input[type=number]{width:66px;padding:6px 6px;font-size:13px;border-radius:8px;text-align:right;min-height:36px}
+#p-table{min-width:560px}
+#c-table{min-width:0}
+#c-table td:first-child{white-space:normal;line-height:1.3}
+.log{display:flex;flex-direction:column;gap:6px;max-height:460px;overflow:auto}
+.log .it{display:grid;grid-template-columns:1fr auto;gap:4px 10px;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px}
+.log .it.used{opacity:.55}
+.log .it .n{font-weight:700;color:var(--ink)}
+.log .it .m{color:var(--mute);font-size:11.5px;font-variant-numeric:tabular-nums}
+.log .it .pz{color:var(--gold2);font-weight:700}
+.log .it .code{font-family:var(--disp);letter-spacing:.1em;font-size:16px;color:var(--gold2)}
+.mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ms{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.ms .v{font-size:22px;font-weight:900;line-height:1.1}
+.ms .l{font-size:11px;color:var(--mute);margin-top:2px}
+@media (max-width:420px){.bar{grid-template-columns:100px 1fr 44px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo">DENSE<small>GACHA 管理画面</small></div>
+    <a class="btn ghost sm" href="/">ガチャ画面へ</a>
+  </div>
+
+  <div id="a-gate" class="gate card stack" hidden>
+    <h2>店舗用 ログイン</h2>
+    <p class="note">パスワードを入れてください</p>
+    <input type="password" id="pw" placeholder="パスワード" autocomplete="current-password">
+    <button class="btn primary block" id="pw-btn" type="button">ログイン</button>
+    <p class="err" id="pw-err" hidden></p>
+  </div>
+
+  <div id="a-body" class="stack" hidden>
+    <div class="status-banner" id="a-banner"></div>
+
+    <div class="card">
+      <div class="daynav">
+        <button class="btn ghost sm" id="d-prev" type="button">← 前日</button>
+        <input type="date" id="d-day">
+        <button class="btn ghost sm" id="d-next" type="button">翌日 →</button>
+        <button class="btn primary sm" id="d-today" type="button">今日</button>
+      </div>
+      <p class="note" style="margin-top:8px">設定は営業日ごとに保存されます。先の日付を選んで、前もって決めておくこともできます（営業日は朝6時で切り替わります）。</p>
+    </div>
+
+    <!-- 1. day status -->
+    <div class="card gold">
+      <h2><span class="b">1</span><span id="s-title">この日の状況と強さ</span></h2>
+      <p class="note" style="margin-bottom:10px">数字と天気から「どれくらい強いクーポンを出すか」を自動で決めます。お客さんの画面には一切出ません。</p>
+      <div class="row">
+        <div class="col"><label class="f" for="s-res">予約（組）</label><input type="number" id="s-res" min="0" step="1" inputmode="numeric"></div>
+        <div class="col"><label class="f" for="s-guests">今いる来客（人）</label><input type="number" id="s-guests" min="0" step="1" inputmode="numeric"></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="col"><label class="f" for="s-base">いつもの来客（人）</label><input type="number" id="s-base" min="1" step="1" inputmode="numeric"></div>
+        <div class="col"><label class="f" for="s-weather">天気</label>
+          <select id="s-weather"><option value="sunny">晴れ</option><option value="cloudy">くもり</option><option value="rain">雨</option><option value="snow">雪</option></select></div>
+      </div>
+      <div style="margin-top:12px">
+        <label class="f">手動で切り替える</label>
+        <div class="seg" id="s-override">
+          <button type="button" data-v="auto">自動</button>
+          <button type="button" data-v="strong">強め</button>
+          <button type="button" data-v="normal">ふつう</button>
+          <button type="button" data-v="weak">控えめ</button>
+          <button type="button" data-v="off">配布停止</button>
+        </div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="lvl" id="s-level"></div>
+        <div class="gauge" id="s-gauge"><i></i><i></i><i></i></div>
+        <p class="note" id="s-reason"></p>
+      </div>
+      <div style="margin-top:14px">
+        <div class="note" style="margin-bottom:6px"><b>この日の上限枚数</b>（空欄＝共通の初期値を使う。0＝無制限）</div>
+        <div class="tbl-wrap"><table id="c-table"><thead><tr><th>景品</th><th>初期値</th><th>この日の上限</th><th>出た数</th></tr></thead><tbody></tbody></table></div>
+        <div class="row" style="margin-top:8px"><div class="col"><label class="f" for="s-total">この日の配布上限（全部で何枚まで）</label><input type="number" id="s-total" min="0" step="1" inputmode="numeric"></div><div class="col"><label class="f" for="s-note">メモ（任意）</label><input type="text" id="s-note" maxlength="200" placeholder="例：忘年会2組あり"></div></div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="note" style="margin-bottom:4px"><b>いま配布中の確率</b>（上限に達した景品は出ません）</div>
+        <div class="bars" id="s-bars"></div>
+      </div>
+      <button class="btn primary block" id="s-save" type="button" style="margin-top:14px">この日の設定を保存</button>
+    </div>
+
+    <!-- 2. today -->
+    <div class="card">
+      <h2><span class="b">2</span>この日の配布状況</h2>
+      <div class="mini-stats">
+        <div class="ms"><div class="v" id="t-total">0</div><div class="l">ガチャ回数</div></div>
+        <div class="ms"><div class="v" id="t-big">0</div><div class="l">大当たり</div></div>
+        <div class="ms"><div class="v" id="t-used">0</div><div class="l">来店・使用済み</div></div>
+      </div>
+      <div class="bars" id="t-caps" style="margin-top:12px"></div>
+    </div>
+
+    <!-- 3. log -->
+    <div class="card">
+      <h2><span class="b">3</span>誰に何が出たか（結果ログ）</h2>
+      <p class="note" style="margin-bottom:8px">スクショを見せられたら、ニックネームか確認コードで検索。合っていたら「使用済み」にしてください。</p>
+      <input type="text" id="l-q" placeholder="ニックネーム or コードで検索">
+      <div class="seg" style="margin:8px 0"><button type="button" data-f="day" class="on">この日</button><button type="button" data-f="all">最近すべて</button></div>
+      <div class="log" id="l-list"></div>
+    </div>
+
+    <!-- 4. prizes -->
+    <div class="card">
+      <h2><span class="b">4</span>景品と確率（全日共通）</h2>
+      <p class="note" style="margin-bottom:8px">数字は「重み」。大きいほど出やすい。初期値は <b>強め＝9割が大当たり</b>、<b>控えめ＝ほぼ5%・10% OFF</b>。「上限/日」は日ごとの設定が空欄のときに使う初期値（0＝無制限）。表は横にスクロールできます。</p>
+      <div class="tbl-wrap"><table id="p-table">
+        <thead><tr><th>景品</th><th>ひとこと</th><th>控えめ</th><th>ふつう</th><th>強め</th><th>上限/日</th><th>大当たり</th><th>有効</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost sm" id="p-add" type="button">＋ 景品を追加</button>
+        <button class="btn ghost sm" id="p-reset" type="button">初期値に戻す</button>
+        <button class="btn primary sm" id="p-save" type="button">景品設定を保存</button>
+      </div>
+    </div>
+
+    <!-- 5. settings -->
+    <div class="card">
+      <h2><span class="b">5</span>その他の設定（全日共通）</h2>
+      <div class="stack">
+        <div class="row">
+          <div class="col"><label class="f" for="o-default">日の設定がないときの強さ</label><select id="o-default"><option value="normal">ふつう</option><option value="weak">控えめ</option><option value="strong">強め</option><option value="off">配布停止</option></select></div>
+          <div class="col"><label class="f" for="o-total">1営業日の配布上限（枚）初期値</label><input type="number" id="o-total" min="0" step="1" inputmode="numeric"></div>
+        </div>
+        <div class="row">
+          <div class="col"><label class="f" for="o-group">予約1組あたりの平均人数</label><input type="number" id="o-group" min="1" step="0.5" inputmode="decimal"></div>
+          <div class="col"><label class="f" for="o-base">いつもの来客（人）初期値</label><input type="number" id="o-base" min="1" step="1" inputmode="numeric"></div>
+        </div>
+        <div class="row">
+          <div class="col"><label class="f" for="o-strong">「強め」にする基準（見込み÷いつも がこの% 未満）</label><input type="number" id="o-strong" min="0" max="200" step="1" inputmode="numeric"></div>
+          <div class="col"><label class="f" for="o-weak">「控えめ」にする基準（この% 以上）</label><input type="number" id="o-weak" min="0" max="300" step="1" inputmode="numeric"></div>
+        </div>
+        <label class="switch"><span>同じ人が1日に何回も回せる（テスト用。本番ではオフ）</span><input type="checkbox" id="o-repeat"></label>
+        <div><label class="f" for="o-msg">配布停止中に出すメッセージ</label><input type="text" id="o-msg" maxlength="120"></div>
+        <button class="btn primary sm" id="o-save" type="button">設定を保存</button>
+        <div><label class="f" for="o-url">ガチャ画面のURL（ストーリーズのリンクに貼る）</label><input type="text" id="o-url" readonly></div>
+        <div class="row">
+          <button class="btn ghost sm" id="o-copy" type="button">URLをコピー</button>
+          <button class="btn danger sm" id="o-del" type="button">この日のログをすべて削除</button>
+          <button class="btn ghost sm" id="o-logout" type="button">ログアウト</button>
+        </div>
+        <p class="note" id="o-del-note" hidden>本当に削除しますか？ <button class="btn danger sm" id="o-del-yes" type="button">削除する</button> <button class="btn ghost sm" id="o-del-no" type="button">やめる</button></p>
+        <p class="note">パスワードを変えるときは Vercel の環境変数 ADMIN_PASSWORD を変更してください。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/logic.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const L = window.GachaLogic;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let toastT; function toast(msg){ let t=$('.toast'); if(!t){ t=document.createElement('div'); t.className='toast'; document.body.appendChild(t); } t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{ t.hidden=true; }, 2400); }
+async function api(path, opts={}){
+  const r = await fetch(path, { credentials:'same-origin', headers:{'Content-Type':'application/json'}, ...opts });
+  let j={}; try{ j=await r.json(); }catch(e){}
+  if(r.status===401){ showLogin(); throw new Error(j.message||'ログインしてください'); }
+  if(!r.ok) throw new Error(j.message||('エラー（'+r.status+'）'));
+  return j;
+}
+const S = { day:null, data:null, filter:'day', allSpins:null, bound:false };
+
+function showLogin(){ $('#a-gate').hidden=false; $('#a-body').hidden=true; }
+async function login(){
+  $('#pw-err').hidden=true;
+  try{ await api('/api/admin/login', { method:'POST', body: JSON.stringify({ password: $('#pw').value }) }); $('#pw').value=''; await load(); }
+  catch(e){ $('#pw-err').textContent=e.message; $('#pw-err').hidden=false; }
+}
+async function load(day){
+  const d = await api('/api/admin/overview' + (day ? '?day='+encodeURIComponent(day) : ''));
+  S.day = d.businessDay; S.data = d;
+  $('#a-gate').hidden=true; $('#a-body').hidden=false;
+  fill(); renderAll();
+  if(!S.bound){ bind(); S.bound=true; }
+}
+
+/* ---------- forms ---------- */
+function fill(){
+  const d=S.data, day=d.day, s=d.settings;
+  $('#d-day').value=S.day;
+  $('#s-title').textContent = L.fmtDayJa(S.day) + ' の状況と強さ' + (S.day===d.today?'（今日）':'');
+  $('#s-res').value=day.reservations; $('#s-guests').value=day.guests; $('#s-base').value=day.baseline??''; $('#s-base').placeholder=s.baseline_default; $('#s-weather').value=day.weather;
+  $$('#s-override button').forEach(b=>b.classList.toggle('on', b.dataset.v===(day.override||'auto')));
+  $('#s-total').value=day.total_cap??''; $('#s-total').placeholder=s.daily_total_cap; $('#s-note').value=day.note||'';
+  const tb=$('#c-table tbody');
+  tb.innerHTML=s.prizes.map(p=>`<tr data-id="${esc(p.id)}"><td>${esc(p.name)}</td><td>${p.cap||'無制限'}</td><td><input type="number" class="dcap" min="0" step="1" inputmode="numeric" value="${day.caps[p.id]??''}" placeholder="${p.cap||0}"></td><td>${d.counts.byPrize[p.id]||0}</td></tr>`).join('');
+  // common settings
+  $('#o-default').value=s.default_level; $('#o-total').value=s.daily_total_cap; $('#o-group').value=s.group_size; $('#o-base').value=s.baseline_default;
+  $('#o-strong').value=s.strong_pct; $('#o-weak').value=s.weak_pct; $('#o-repeat').checked=!!s.allow_repeat; $('#o-msg').value=s.closed_msg;
+  $('#o-url').value=location.origin + '/';
+  renderPrizes(s.prizes);
+}
+function readDay(){
+  const caps={}; $$('#c-table tbody tr').forEach(tr=>{ const v=$('.dcap',tr).value; if(v!=='') caps[tr.dataset.id]=v; });
+  return { reservations:$('#s-res').value, guests:$('#s-guests').value, baseline:$('#s-base').value, weather:$('#s-weather').value,
+    override:($('#s-override .on')||{dataset:{}}).dataset.v||'auto', caps, total_cap:$('#s-total').value, note:$('#s-note').value };
+}
+function readSettingsForm(){
+  const s=S.data.settings;
+  return { ...s, default_level:$('#o-default').value, daily_total_cap:$('#o-total').value, group_size:$('#o-group').value, baseline_default:$('#o-base').value,
+    strong_pct:$('#o-strong').value, weak_pct:$('#o-weak').value, allow_repeat:$('#o-repeat').checked, closed_msg:$('#o-msg').value };
+}
+function renderPrizes(prizes){
+  $('#p-table tbody').innerHTML=prizes.map((p,i)=>`<tr data-i="${i}" data-id="${esc(p.id)}">
+    <td><input type="text" class="pn" value="${esc(p.name)}" maxlength="40"></td>
+    <td><input type="text" class="ps" value="${esc(p.sub||'')}" maxlength="60"></td>
+    <td><input type="number" class="w0" min="0" value="${p.w[0]}"></td>
+    <td><input type="number" class="w1" min="0" value="${p.w[1]}"></td>
+    <td><input type="number" class="w2" min="0" value="${p.w[2]}"></td>
+    <td><input type="number" class="pc" min="0" value="${p.cap}"></td>
+    <td><input type="checkbox" class="pb" ${p.big?'checked':''} style="accent-color:var(--gold);width:18px;height:18px"></td>
+    <td><input type="checkbox" class="pe" ${p.enabled!==false?'checked':''} style="accent-color:var(--gold);width:18px;height:18px"></td>
+    <td><button class="btn ghost sm pdel" type="button">削除</button></td>
+  </tr>`).join('');
+}
+function readPrizes(){
+  return $$('#p-table tbody tr').map(tr=>{ const big=$('.pb',tr).checked; const old=S.data.settings.prizes.find(p=>p.id===tr.dataset.id)||{};
+    return { id:tr.dataset.id||'', name:$('.pn',tr).value.trim()||'景品', sub:$('.ps',tr).value.trim(), w:[+$('.w0',tr).value||0,+$('.w1',tr).value||0,+$('.w2',tr).value||0], cap:+$('.pc',tr).value||0, big, enabled:$('.pe',tr).checked, ico: old.ico || (big?'p-bottle':'p-pct') }; });
+}
+
+/* ---------- render ---------- */
+function renderAll(){ renderBanner(); renderLevel(); renderToday(); renderLog(); }
+function renderBanner(){
+  const d=S.data; const isToday=S.day===d.today;
+  $('#a-banner').innerHTML=`<span>表示中：<b>${L.fmtDayJa(S.day)}</b>${isToday?'（今日）':''}</span><span class="pill ${d.level==='off'?'bad':'g'}">配布：${L.LEVELS[d.level]}</span>${d.hasRow?'':'<span class="pill warn">この日の設定なし（初期値）</span>'}`;
+}
+function currentLevel(){
+  const s=L.normalizeSettings(readSettingsForm());
+  const day=L.normalizeDay(readDay());
+  return { s, day, r:L.computeLevel(day, s) };
+}
+function renderLevel(){
+  const { s, day, r } = currentLevel();
+  const colors={strong:'var(--ok)',normal:'var(--gold2)',weak:'var(--warn)',off:'var(--bad)'};
+  $('#s-level').innerHTML=`<span style="color:${colors[r.level]}">この日のクーポン：${L.LEVELS[r.level]}</span>`;
+  const on={strong:3,normal:2,weak:1,off:0}[r.level];
+  $$('#s-gauge i').forEach((i,k)=>i.classList.toggle('on',k<on));
+  $('#s-reason').textContent=r.reason+(S.data.hasRow?'':'（まだ保存していません。保存するとこの判定で配ります）');
+  const bars=$('#s-bars');
+  if(r.level==='off'){ bars.innerHTML='<p class="note">配布停止中。お客さんの画面には「'+esc(s.closed_msg)+'」と出ます。</p>'; return; }
+  const tbl=L.probTable(s, day, S.data.counts.byPrize, r.level);
+  bars.innerHTML=tbl.map(p=>`<div class="bar ${p.capped?'capped':''}"><span class="n">${esc(p.name)}</span><span class="t"><i style="width:${p.pct}%"></i></span><span class="p">${p.capped?'上限':p.pct+'%'}</span></div>`).join('');
+}
+function renderToday(){
+  const d=S.data; const t=d.spins;
+  $('#t-total').textContent=t.length; $('#t-big').textContent=t.filter(e=>e.big).length; $('#t-used').textContent=t.filter(e=>e.used).length;
+  const { s, day } = currentLevel();
+  $('#t-caps').innerHTML=s.prizes.filter(p=>p.enabled).map(p=>{ const n=d.counts.byPrize[p.id]||0; const cap=L.capFor(p, day); const pct=cap?Math.min(100,Math.round(n/cap*100)):Math.min(100,n*5); return `<div class="bar ${cap&&n>=cap?'capped':''}"><span class="n">${esc(p.name)}</span><span class="t"><i style="width:${pct}%"></i></span><span class="p">${n}${cap?'/'+cap:'枚'}</span></div>`; }).join('');
+}
+function renderLog(){
+  const q=($('#l-q').value||'').trim().toLowerCase();
+  let list = S.filter==='all' ? (S.allSpins||[]) : S.data.spins;
+  list = list.slice().sort((a,b)=>b.ts-a.ts);
+  if(q) list=list.filter(e=>(e.nick||'').toLowerCase().includes(q)||(e.code||'').toLowerCase().includes(q));
+  const el=$('#l-list');
+  if(!list.length){ el.innerHTML='<p class="note">まだ結果がありません。</p>'; return; }
+  el.innerHTML=list.slice(0,300).map(e=>`<div class="it ${e.used?'used':''}">
+    <div><span class="n">${esc(e.nick)}</span> <span class="pz">${e.big?'★ ':''}${esc(e.prize)}</span><div class="m">${L.fmtTs(e.ts)}${S.filter==='all'?'　営業日 '+esc(e.day):''}　配布：${L.LEVELS[e.level]||''}</div></div>
+    <div style="text-align:right"><div class="code">${esc(e.code)}</div><button class="btn ${e.used?'ghost':'primary'} sm" data-used="${e.used?0:1}" data-id="${esc(e.id)}" type="button">${e.used?'未使用に戻す':'使用済みにする'}</button></div>
+  </div>`).join('');
+}
+
+/* ---------- events ---------- */
+function bind(){
+  $('#d-day').addEventListener('change',()=>{ const v=$('#d-day').value; if(/^\d{4}-\d{2}-\d{2}$/.test(v)) load(v).catch(e=>toast(e.message)); });
+  $('#d-prev').addEventListener('click',()=>load(L.shiftDay(S.day,-1)).catch(e=>toast(e.message)));
+  $('#d-next').addEventListener('click',()=>load(L.shiftDay(S.day,1)).catch(e=>toast(e.message)));
+  $('#d-today').addEventListener('click',()=>load().catch(e=>toast(e.message)));
+  $$('#s-override button').forEach(b=>b.addEventListener('click',()=>{ $$('#s-override button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); renderLevel(); renderToday(); }));
+  ['#s-res','#s-guests','#s-base','#s-weather','#s-total','#o-group','#o-strong','#o-weak','#o-base'].forEach(s=>$(s).addEventListener('input',()=>{ renderLevel(); renderToday(); }));
+  $('#c-table').addEventListener('input',()=>{ renderLevel(); renderToday(); });
+  $('#s-save').addEventListener('click',async()=>{ try{ const r=await api('/api/admin/day/'+encodeURIComponent(S.day), { method:'PUT', body: JSON.stringify(readDay()) }); toast('保存しました：'+L.fmtDayJa(S.day)+' は「'+L.LEVELS[r.level]+'」'); await load(S.day); }catch(e){ toast(e.message); } });
+  $('#p-add').addEventListener('click',()=>{ renderPrizes([...readPrizes(), { id:'', name:'新しい景品', sub:'', w:[10,10,10], cap:0, big:false, enabled:true, ico:'p-pct' }]); });
+  $('#p-reset').addEventListener('click',()=>{ renderPrizes(L.DEFAULT_PRIZES.map(p=>({...p, w:[...p.w]}))); toast('初期値を読み込みました。「景品設定を保存」で反映されます'); });
+  $('#p-table').addEventListener('click',e=>{ const b=e.target.closest('.pdel'); if(!b) return; const list=readPrizes(); list.splice(+b.closest('tr').dataset.i,1); renderPrizes(list); });
+  $('#p-save').addEventListener('click',async()=>{ try{ await api('/api/admin/settings', { method:'PUT', body: JSON.stringify({ ...readSettingsForm(), prizes: readPrizes() }) }); toast('景品設定を保存しました'); await load(S.day); }catch(e){ toast(e.message); } });
+  $('#o-save').addEventListener('click',async()=>{ try{ await api('/api/admin/settings', { method:'PUT', body: JSON.stringify({ ...readSettingsForm(), prizes: S.data.settings.prizes }) }); toast('設定を保存しました'); await load(S.day); }catch(e){ toast(e.message); } });
+  $('#l-q').addEventListener('input',renderLog);
+  $$('.seg [data-f]').forEach(b=>b.addEventListener('click',async()=>{ $$('.seg [data-f]').forEach(x=>x.classList.remove('on')); b.classList.add('on'); S.filter=b.dataset.f; if(S.filter==='all'){ try{ S.allSpins=(await api('/api/admin/spins')).spins; }catch(e){ toast(e.message); } } renderLog(); }));
+  $('#l-list').addEventListener('click',async e=>{ const b=e.target.closest('button[data-id]'); if(!b) return; b.disabled=true; try{ await api('/api/admin/spins/'+encodeURIComponent(b.dataset.id)+'/used', { method:'POST', body: JSON.stringify({ used: b.dataset.used==='1' }) }); toast(b.dataset.used==='1'?'使用済みにしました':'未使用に戻しました'); if(S.filter==='all'){ S.allSpins=(await api('/api/admin/spins')).spins; } await load(S.day); }catch(err){ toast(err.message); b.disabled=false; } });
+  $('#o-copy').addEventListener('click',async()=>{ const url=$('#o-url').value; try{ await navigator.clipboard.writeText(url); toast('URLをコピーしました'); }catch(e){ $('#o-url').focus(); $('#o-url').select(); toast('URL欄を長押ししてコピーしてください'); } });
+  $('#o-del').addEventListener('click',()=>{ $('#o-del-note').hidden=false; });
+  $('#o-del-no').addEventListener('click',()=>{ $('#o-del-note').hidden=true; });
+  $('#o-del-yes').addEventListener('click',async()=>{ try{ const r=await api('/api/admin/day/'+encodeURIComponent(S.day)+'/spins', { method:'DELETE' }); $('#o-del-note').hidden=true; toast(`${r.deleted}件のログを削除しました`); await load(S.day); }catch(e){ toast(e.message); } });
+  $('#o-logout').addEventListener('click',async()=>{ await api('/api/admin/logout',{method:'POST'}).catch(()=>{}); showLogin(); });
+}
+$('#pw-btn').addEventListener('click',login);
+$('#pw').addEventListener('keydown',e=>{ if(e.key==='Enter') login(); });
+load().catch(()=>showLogin());
+})();
+</script>
+</body>
+</html>

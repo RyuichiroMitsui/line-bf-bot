@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0d0f">
+<title>DENSE ガチャ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Bebas+Neue&display=swap">
+<link rel="stylesheet" href="/assets/app.css">
+<style>
+/* ---------- ガチャ機と演出 ---------- */
+.machine-wrap{position:relative;margin:4px auto 0;max-width:340px}
+.machine{width:100%;height:auto;display:block;transform-origin:50% 90%}
+.cap{transform-box:view-box}
+.caps{transform-origin:150px 118px}
+.crank{transform-origin:150px 266px}
+.flash{opacity:0}
+.capsule-out{opacity:0;transform-origin:150px 320px}
+.capsule-inner{transform-origin:150px 320px}
+.glow{opacity:0;transition:opacity .4s}
+/* 回している間：機械が揺れ、カプセルが跳ね、ハンドルが4回転、ドームが光る */
+.spinning .machine{animation:shake .14s linear infinite}
+.spinning .caps{animation:tumble .5s ease-in-out infinite}
+.spinning .cap{animation:bob .3s ease-in-out infinite alternate}
+.spinning .crank{animation:crank 2.3s cubic-bezier(.45,.05,.25,1) 1}
+.spinning .flash{animation:flash 1.1s ease-in-out infinite}
+/* 落ちた：ドスンと落ちてバウンド、光って、タップ待ちで左右に揺れる */
+.dropped .machine{animation:thud .55s ease-out 1}
+.dropped .glow{opacity:1}
+.dropped .capsule-out{animation:drop .95s cubic-bezier(.2,1.5,.4,1) forwards}
+.dropped .capsule-inner{animation:wobble 1.3s ease-in-out 1s infinite}
+/* 開けた：カプセルが弾ける */
+.opened .capsule-out{animation:burst .4s ease-in forwards}
+.opened .capsule-inner{animation:none}
+.opened .glow{opacity:0}
+@keyframes shake{0%{transform:translate(0,0) rotate(0)}25%{transform:translate(-4px,2px) rotate(-1deg)}50%{transform:translate(4px,-2px) rotate(1deg)}75%{transform:translate(-3px,-3px) rotate(-.6deg)}100%{transform:translate(3px,3px) rotate(.6deg)}}
+@keyframes tumble{0%,100%{transform:translate(0,0) rotate(0)}20%{transform:translate(-11px,7px) rotate(-8deg)}45%{transform:translate(10px,-10px) rotate(7deg)}70%{transform:translate(-7px,-5px) rotate(-5deg)}85%{transform:translate(8px,6px) rotate(6deg)}}
+@keyframes bob{from{transform:translateY(0) rotate(0)}to{transform:translateY(-16px) rotate(28deg)}}
+@keyframes crank{to{transform:rotate(1440deg)}}
+@keyframes flash{0%,100%{opacity:0}50%{opacity:.4}}
+@keyframes thud{0%{transform:translateY(0)}30%{transform:translateY(7px)}60%{transform:translateY(-4px)}100%{transform:translateY(0)}}
+@keyframes drop{0%{opacity:0;transform:translateY(-100px) scale(.5) rotate(-50deg)}55%{opacity:1;transform:translateY(12px) scale(1.15) rotate(12deg)}75%{transform:translateY(-7px) scale(.97) rotate(-5deg)}100%{opacity:1;transform:translateY(0) scale(1) rotate(0)}}
+@keyframes wobble{0%,100%{transform:rotate(0)}25%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}}
+@keyframes burst{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(2.2)}}
+.tap-hint{text-align:center;font-size:14px;font-weight:700;color:var(--gold2);margin-top:-4px;animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.04)}}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:40}
+@media (prefers-reduced-motion:reduce){
+  .spinning .machine,.spinning .caps,.spinning .cap,.spinning .crank,.spinning .flash,.dropped .machine,.dropped .capsule-inner,.tap-hint{animation:none}
+  .dropped .capsule-out{animation:none;opacity:1}
+  .opened .capsule-out{animation:none;opacity:0}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="p-pct" viewBox="0 0 64 64"><path d="M14 10h24l16 16v28H14z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="25" cy="30" r="4" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="39" cy="44" r="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M40 28L24 46" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+    <symbol id="p-yen" viewBox="0 0 64 64"><circle cx="32" cy="32" r="24" fill="none" stroke="currentColor" stroke-width="3"/><path d="M22 18l10 14 10-14M32 32v16M23 38h18M23 45h18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="p-bottle" viewBox="0 0 64 64"><path d="M26 6h12v10c0 4 8 7 8 16v24a4 4 0 0 1-4 4H22a4 4 0 0 1-4-4V32c0-9 8-12 8-16z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><rect x="22" y="36" width="20" height="14" rx="2" fill="currentColor" opacity=".35"/><path d="M26 10h12" stroke="currentColor" stroke-width="3"/></symbol>
+    <symbol id="p-shots" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M8 24h14l-2 26H10z"/><path d="M25 24h14l-2 26H27z"/><path d="M42 24h14l-2 26H44z"/></g><g fill="currentColor" opacity=".4"><path d="M10.5 38h9.5l-.8 12H11.5z"/><path d="M27.5 38h9.5l-.8 12H28.5z"/><path d="M44.5 38h9.5l-.8 12H45.5z"/></g><path d="M22 14l4 6M32 10v8M42 14l-4 6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo">DENSE<small>ROPPONGI · SHISHA BAR</small></div>
+    <span class="pill g" id="g-day">本日限り</span>
+  </div>
+
+  <div id="g-head">
+    <div class="eyebrow">TONIGHT'S LUCK</div>
+    <h1>ニックネームを入れて、<br>ガチャを回す。</h1>
+    <p class="lead">当たったクーポンは<b style="color:var(--ink)">スクショして入店時に見せる</b>だけ。1人1日1回、有効期限は本日の営業中。</p>
+  </div>
+
+  <div id="g-stage">
+    <div class="machine-wrap" id="machine">
+      <svg class="machine" viewBox="0 0 300 380" aria-label="カプセルガチャ">
+        <defs>
+          <radialGradient id="dome" cx="40%" cy="30%" r="70%"><stop offset="0" stop-color="#ffffff" stop-opacity=".22"/><stop offset=".6" stop-color="#ffffff" stop-opacity=".05"/><stop offset="1" stop-color="#000" stop-opacity=".2"/></radialGradient>
+          <linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2a30"/><stop offset="1" stop-color="#121215"/></linearGradient>
+          <linearGradient id="goldg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0d28a"/><stop offset=".5" stop-color="#d9ab4a"/><stop offset="1" stop-color="#9a7430"/></linearGradient>
+          <radialGradient id="glowg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f0d28a" stop-opacity=".6"/><stop offset="1" stop-color="#f0d28a" stop-opacity="0"/></radialGradient>
+          <radialGradient id="flashg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff2c4" stop-opacity=".9"/><stop offset="1" stop-color="#f0d28a" stop-opacity="0"/></radialGradient>
+          <clipPath id="domeclip"><circle cx="150" cy="118" r="92"/></clipPath>
+        </defs>
+        <ellipse cx="150" cy="364" rx="120" ry="10" fill="#000" opacity=".5"/>
+        <circle cx="150" cy="118" r="94" fill="#0b0b0d" stroke="url(#goldg)" stroke-width="3"/>
+        <g clip-path="url(#domeclip)">
+          <circle class="flash" cx="150" cy="118" r="92" fill="url(#flashg)"/>
+          <g class="caps"><g id="capsules"></g></g>
+        </g>
+        <circle cx="150" cy="118" r="92" fill="url(#dome)"/>
+        <path d="M92 70 Q120 36 160 34" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="5" stroke-linecap="round"/>
+        <rect x="58" y="200" width="184" height="18" rx="6" fill="url(#goldg)"/>
+        <rect x="66" y="216" width="168" height="134" rx="14" fill="url(#body)" stroke="rgba(240,210,138,.35)"/>
+        <text x="150" y="236" text-anchor="middle" font-family="Bebas Neue" font-size="19" letter-spacing="5" fill="#f0d28a">DENSE</text>
+        <g class="crank">
+          <circle cx="150" cy="266" r="18" fill="#0b0b0d" stroke="url(#goldg)" stroke-width="3"/>
+          <rect x="146.5" y="250" width="7" height="32" rx="3" fill="url(#goldg)"/>
+          <rect x="134" y="262.5" width="32" height="7" rx="3" fill="url(#goldg)"/>
+          <circle cx="150" cy="266" r="5" fill="#f0d28a"/>
+        </g>
+        <path d="M108 296 h84 v38 a6 6 0 0 1 -6 6 h-72 a6 6 0 0 1 -6 -6 z" fill="#060607" stroke="rgba(240,210,138,.35)"/>
+        <ellipse class="glow" cx="150" cy="330" rx="64" ry="28" fill="url(#glowg)"/>
+        <g class="capsule-out" id="capsule-out" style="cursor:pointer">
+          <g class="capsule-inner">
+            <circle cx="150" cy="320" r="21" fill="#1b1b1f" stroke="#f0d28a" stroke-width="2"/>
+            <path d="M129 320 a21 21 0 0 1 42 0 z" fill="url(#goldg)"/>
+            <ellipse cx="143" cy="309" rx="5" ry="3" fill="#fff" opacity=".5"/>
+          </g>
+        </g>
+        <rect x="80" y="350" width="30" height="10" rx="3" fill="#0b0b0d"/>
+        <rect x="190" y="350" width="30" height="10" rx="3" fill="#0b0b0d"/>
+      </svg>
+    </div>
+    <div class="tap-hint" id="tap-hint" hidden>カプセルが出ました！</div>
+    <button class="btn primary block" id="g-open" type="button" hidden style="margin-top:6px">結果を見る</button>
+
+    <form id="g-form" class="card stack" style="margin-top:8px" autocomplete="off">
+      <div>
+        <label class="f" for="nick">ニックネーム（入店時に伝える名前）</label>
+        <input type="text" id="nick" maxlength="12" placeholder="例：りゅう" required>
+      </div>
+      <button class="btn primary block" id="spin-btn" type="submit">ガチャを回す</button>
+      <p class="note" id="g-note">結果にはニックネーム・日時・確認コードが入ります。スクショの加工は無効です。</p>
+      <p class="err" id="g-err" hidden></p>
+    </form>
+  </div>
+
+  <div id="g-result" hidden class="stack" style="margin-top:12px"></div>
+  <p style="text-align:center;margin-top:28px"><a class="hidden-link" href="/admin">店舗用</a></p>
+</div>
+
+<script src="/assets/logic.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = (s, el=document) => el.querySelector(s);
+const L = window.GachaLogic;
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS = { get(k,d){ try{ const v=localStorage.getItem('dg_'+k); return v==null?d:v; }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem('dg_'+k, v); }catch(e){} } };
+const clientId = (() => { let v = LS.get('cid',''); if(!v){ v = (crypto.randomUUID ? crypto.randomUUID() : 'c'+Math.random().toString(36).slice(2)+Date.now().toString(36)); LS.set('cid', v); } return v; })();
+let toastT; function toast(msg){ let t=$('.toast'); if(!t){ t=document.createElement('div'); t.className='toast'; document.body.appendChild(t); } t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{ t.hidden=true; }, 2400); }
+async function api(path, opts={}){ const r = await fetch(path, { credentials:'same-origin', headers:{'Content-Type':'application/json'}, ...opts }); let j={}; try{ j = await r.json(); }catch(e){} return { ok:r.ok, status:r.status, ...j }; }
+
+/* ドームの中のカプセル */
+(function drawCapsules(){
+  const g=$('#capsules'); const cols=['#d9ab4a','#f0d28a','#3a3a44','#8a6a2a','#2a2a30','#c98500'];
+  const pts=[[95,150],[125,160],[158,165],[190,150],[215,130],[110,120],[145,135],[180,120],[130,95],[165,100],[200,95],[150,70],[115,80],[185,80]];
+  let s='';
+  pts.forEach(([x,y],k)=>{ const c=cols[k%cols.length]; const r=15+(k%3)*2; s+=`<g class="cap" style="transform-origin:${x}px ${y}px;animation-delay:-${(k*0.07).toFixed(2)}s" transform="rotate(${(k*47)%360} ${x} ${y})"><circle cx="${x}" cy="${y}" r="${r}" fill="#1b1b1f" stroke="rgba(255,255,255,.12)"/><path d="M${x-r} ${y} a${r} ${r} 0 0 1 ${2*r} 0 z" fill="${c}"/><ellipse cx="${x-r*.3}" cy="${y-r*.45}" rx="${r*.25}" ry="${r*.15}" fill="#fff" opacity=".45"/></g>`; });
+  g.innerHTML=s;
+})();
+
+/* 紙吹雪（大当たりは多め） */
+function confetti(big){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c=document.createElement('canvas'); c.className='confetti'; document.body.appendChild(c);
+  const ctx=c.getContext('2d'); const W=c.width=innerWidth, H=c.height=innerHeight;
+  const N=big?180:70; const cols=['#f0d28a','#d9ab4a','#fff8e1','#b98a2e'];
+  const ps=Array.from({length:N},()=>({x:W/2+(Math.random()-.5)*120,y:H*0.32,vx:(Math.random()-.5)*16,vy:-Math.random()*16-5,r:4+Math.random()*5,c:cols[Math.floor(Math.random()*cols.length)],a:Math.random()*6,s:(Math.random()-.5)*.35}));
+  let t=0;
+  (function frame(){ ctx.clearRect(0,0,W,H); ps.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=.5; p.vx*=.99; p.a+=p.s; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.fillStyle=p.c; ctx.fillRect(-p.r,-p.r/2,p.r*2,p.r); ctx.restore(); }); if(++t<120) requestAnimationFrame(frame); else c.remove(); })();
+}
+
+const G = {
+  busy:false, pending:null, isAdmin:false, status:null,
+  async init(){
+    $('#g-form').addEventListener('submit', e => { e.preventDefault(); G.spin(); });
+    ['#capsule-out','#g-open','#tap-hint'].forEach(s => $(s).addEventListener('click', () => G.openCapsule()));
+    const saved=LS.get('nick',''); if(saved) $('#nick').value=saved;
+    api('/api/admin/me').then(r => { G.isAdmin = !!r.admin; }).catch(()=>{});
+    try{
+      const st = await api('/api/status');
+      if(st.ok){ G.status=st; $('#g-day').textContent = (st.dayLabel||'本日') + ' 限り'; if(!st.open){ this.showErr(st.message || '本日のガチャはお休みです'); $('#spin-btn').disabled=true; } }
+    }catch(e){ /* オフラインでも入力はできる */ }
+  },
+  showErr(m){ const el=$('#g-err'); el.textContent=m||''; el.hidden=!m; },
+  async spin(){
+    if(this.busy) return;
+    const nick=$('#nick').value.trim();
+    if(!nick){ this.showErr('ニックネームを入れてください'); return; }
+    this.showErr('');
+    this.busy=true; const btn=$('#spin-btn'); btn.disabled=true; btn.textContent='回しています…';
+    const m=$('#machine'); m.classList.remove('dropped','opened'); m.classList.add('spinning');
+    try{
+      const [r] = await Promise.all([ api('/api/spin', { method:'POST', body: JSON.stringify({ nickname:nick, clientId }) }), wait(2300) ]);
+      m.classList.remove('spinning');
+      if(!r.ok || !r.ticket){ this.showErr(r.message || 'うまく回せませんでした。電波の良いところでもう一度お試しください。'); return; }
+      LS.set('nick', nick);
+      if(r.again){ this.renderTicket(r.ticket, true); return; }
+      m.classList.add('dropped');
+      this.pending = r.ticket;
+      $('#g-form').hidden=true; $('#tap-hint').hidden=false; $('#g-open').hidden=false;
+      $('#g-open').scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }catch(e){ console.error(e); m.classList.remove('spinning'); this.showErr('うまく回せませんでした。電波の良いところでもう一度お試しください。'); }
+    finally{ this.busy=false; btn.disabled=!!(this.status && !this.status.open); btn.textContent='ガチャを回す'; }
+  },
+  openCapsule(){
+    const t=this.pending; if(!t) return; this.pending=null;
+    $('#tap-hint').hidden=true; $('#g-open').hidden=true;
+    $('#machine').classList.add('opened');
+    confetti(t.big);
+    setTimeout(() => this.renderTicket(t, false), 250);
+  },
+  renderTicket(e, again){
+    const r=$('#g-result'); r.hidden=false;
+    $('#g-stage').hidden=true; $('#g-head').hidden=true;
+    r.innerHTML=`
+      <div class="eyebrow">RESULT</div>
+      <h1 style="font-size:22px;margin-bottom:10px">${e.big?'大当たり！':'当たり！'}<small>${again?'今日はもう回しています。本日の結果はこちら。':'この画面をスクショして、入店時にスタッフへ見せてください。'}</small></h1>
+      <div class="ticket ${e.big?'big':''}">
+        <div class="stamp">${e.big?'BIG<br>WIN':'LUCKY'}</div>
+        <div class="top">
+          <div class="brand">DENSE ROPPONGI</div>
+          <div class="win">${e.big?'大当たり！':'当たり'}</div>
+          <div style="display:flex;gap:14px;align-items:center">
+            <svg class="prize-ico" style="color:var(--gold2)"><use href="#${esc(e.ico||'p-pct')}"/></svg>
+            <div><div class="prize">${esc(e.prize)}</div><div class="sub">${esc(e.sub||'')}</div></div>
+          </div>
+        </div>
+        <div class="bottom">
+          <div><div class="k">NICKNAME</div><div class="v">${esc(e.nick)}</div></div>
+          <div><div class="k">CODE</div><div class="code">${esc(e.code)}</div></div>
+          <div class="wide"><div class="k">DATE / TIME</div><div class="v">${L.fmtTs(e.ts)}</div></div>
+          <div class="wide"><div class="k">VALID</div><div class="v">${L.fmtDayJa(e.day)} の営業中のみ有効</div></div>
+        </div>
+        <div class="foot">この画面をスクショして、入店時にスタッフへ見せてください。ニックネーム・日時・コードはお店側の記録と照合します。ほかのクーポンとの併用不可。</div>
+      </div>
+      <p class="note" style="text-align:center">六本木 DENSE ／ Instagram @dense_roppongi</p>
+      <button class="btn ghost block" type="button" id="g-back">閉じる</button>
+      ${this.isAdmin?'<button class="btn ghost sm block" type="button" id="g-reset" style="color:var(--warn);border-color:rgba(240,179,90,.5)">テスト用：今日の自分の結果を消して回し直す（店舗ログイン中のみ表示）</button>':''}`;
+    const back=()=>{ r.hidden=true; this.pending=null; $('#g-stage').hidden=false; $('#g-head').hidden=false; $('#g-form').hidden=false; $('#g-open').hidden=true; $('#tap-hint').hidden=true; $('#machine').classList.remove('dropped','opened','spinning'); window.scrollTo({top:0,behavior:'smooth'}); };
+    $('#g-back').addEventListener('click', back);
+    const rb=$('#g-reset'); if(rb) rb.addEventListener('click', async()=>{ rb.disabled=true; const res=await api(`/api/admin/day/${encodeURIComponent(e.day)}/spins?clientId=${encodeURIComponent(clientId)}`, { method:'DELETE' }); if(res.ok){ toast(res.deleted?`今日の結果 ${res.deleted}件を消しました。もう一度回せます`:'消す結果がありませんでした'); back(); } else { toast(res.message||'リセットできませんでした'); rb.disabled=false; } });
+    r.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+};
+G.init();
+})();
+</script>
+</body>
+</html>
