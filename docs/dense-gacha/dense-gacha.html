@@ -211,7 +211,8 @@ details summary{cursor:pointer;color:var(--gold2);font-weight:700;font-size:13.5
           <rect x="190" y="350" width="30" height="10" rx="3" fill="#0b0b0d"/>
         </svg>
       </div>
-      <div class="tap-hint" id="tap-hint" hidden>カプセルをタップして開ける</div>
+      <div class="tap-hint" id="tap-hint" hidden>カプセルが出ました！</div>
+      <button class="btn primary block" id="g-open" type="button" hidden style="margin-top:6px">結果を見る</button>
 
       <form id="g-form" class="card stack" style="margin-top:8px" autocomplete="off">
         <div>
@@ -500,7 +501,10 @@ const G = {
     $('#g-day').textContent = fmtDayJa(bizDay()) + ' 限り';
     $('#g-form').addEventListener('submit', e=>{ e.preventDefault(); G.spin(); });
     const saved=LS.get('nick',''); if(saved) $('#nick').value=saved;
+    $('#capsule-out').style.cursor='pointer';
+    ['#capsule-out','#g-open','#tap-hint'].forEach(s=>$(s).addEventListener('click',()=>G.openCapsule()));
   },
+  openCapsule(){ const p=this.pending; if(!p) return; this.pending=null; $('#tap-hint').hidden=true; $('#g-open').hidden=true; $('#machine').classList.add('opened'); this.renderTicket(p.entry, p.pub, false); },
   showErr(m){ const el=$('#g-err'); el.textContent=m; el.hidden=!m; },
   async spin(){
     if(this.busy) return;
@@ -523,21 +527,19 @@ const G = {
       const ts=Date.now();
       const code=await makeCode(`${pub.salt}|${nick}|${ts}|${prize.id}`);
       const entry={ id:uid8(), nick, prizeId:prize.id, prize:prize.name, sub:prize.sub||'', big:!!prize.big, ico:prize.ico||'p-pct', ts, day, code, used:false, level:pub.level };
-      // animation
+      // the machine keeps spinning while the result is recorded; the capsule drops only once that succeeded
       btn.textContent='回しています…';
       const m=$('#machine'); m.classList.remove('dropped','opened'); m.classList.add('spinning');
-      await wait(1700);
-      m.classList.remove('spinning'); m.classList.add('dropped');
-      // record first, then let them open the capsule
-      await Store.addMySpin(entry);
-      const c2=await Store.getCounters(day); c2.counts=c2.counts||{}; c2.counts[prize.id]=(c2.counts[prize.id]||0)+1; c2.total=(c2.total||0)+1; await Store.setCounters(day,c2);
+      await Promise.all([ wait(1700), (async()=>{
+        await Store.addMySpin(entry);
+        const c2=await Store.getCounters(day); c2.counts=c2.counts||{}; c2.counts[prize.id]=(c2.counts[prize.id]||0)+1; c2.total=(c2.total||0)+1; await Store.setCounters(day,c2);
+      })() ]);
       LS.set('nick', nick);
-      $('#tap-hint').hidden=false;
-      const open=()=>{ $('#capsule-out').removeEventListener('click',open); $('#tap-hint').removeEventListener('click',open); $('#tap-hint').hidden=true; m.classList.add('opened'); this.renderTicket(entry, pub, false); };
-      $('#capsule-out').addEventListener('click',open); $('#tap-hint').addEventListener('click',open);
-      $('#capsule-out').style.cursor='pointer';
-      setTimeout(()=>{ if(!m.classList.contains('opened')) open(); }, 6000);
-    }catch(err){ console.error(err);
+      m.classList.remove('spinning'); m.classList.add('dropped');
+      this.pending={entry, pub};
+      $('#g-form').hidden=true; $('#tap-hint').hidden=false; $('#g-open').hidden=false;
+      $('#g-open').scrollIntoView({behavior:'smooth',block:'nearest'});
+    }catch(err){ console.error(err); $('#machine').classList.remove('spinning');
       const perm = Store.mode==='db' && (err && (err.code==='invalid_argument' || err.message==='no-id'));
       this.showErr(perm ? 'このお試し版では、店舗アカウントでログインした端末だけ回せます。本番公開時はどなたでも回せるようになります。' : 'うまく回せませんでした。電波の良いところでもう一度お試しください。'); }
     finally{ this.busy=false; btn.disabled=false; btn.textContent='ガチャを回す'; }
@@ -568,7 +570,7 @@ const G = {
       <p class="note" style="text-align:center">六本木 DENSE ／ Instagram @dense_roppongi</p>
       <button class="btn ghost block" type="button" id="g-back">閉じる</button>
       ${(Store.isAdmin||Store.mode!=='db')?'<button class="btn ghost sm block" type="button" id="g-reset" style="color:var(--warn);border-color:rgba(240,179,90,.5)">テスト用：今日の結果を消して回し直す（店舗アカウントのみ表示）</button>':''}`;
-    const back=()=>{ r.hidden=true; $('#g-stage').hidden=false; const m=$('#machine'); m.classList.remove('dropped','opened','spinning'); };
+    const back=()=>{ r.hidden=true; this.pending=null; $('#g-stage').hidden=false; $('#g-form').hidden=false; $('#g-open').hidden=true; $('#tap-hint').hidden=true; const m=$('#machine'); m.classList.remove('dropped','opened','spinning'); };
     $('#g-back').addEventListener('click',back);
     const rb=$('#g-reset'); if(rb) rb.addEventListener('click',async()=>{ rb.disabled=true; try{ const n=await Store.resetMyToday(e.day); toast(n?`今日の結果 ${n}件を消しました。もう一度回せます`:'消す結果がありませんでした'); back(); }catch(err){ console.error(err); toast('リセットできませんでした'); rb.disabled=false; } });
     r.scrollIntoView({behavior:'smooth',block:'start'});
