@@ -405,10 +405,11 @@ const LS = {
   set(k, v){ try{ localStorage.setItem('dg_'+k, JSON.stringify(v)); }catch(e){} },
 };
 const Store = {
-  mode:'local', db:null, user:null, uid:null, isAdmin:false, ready:null,
+  mode:'local', db:null, user:null, uid:null, isAdmin:false, ready:null, standalone:true,
   async init(){
     this.ready = (async () => {
       try{
+        this.standalone = !(window.claude && typeof window.claude.use === 'function');
         if (window.claude && typeof window.claude.use === 'function'){
           const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
           if (db){
@@ -523,6 +524,7 @@ const G = {
     this.busy=true; const btn=$('#spin-btn'); btn.disabled=true; btn.textContent='準備中…';
     try{
       await Store.ready;
+      if(!Store.standalone && Store.mode!=='db'){ this.showErr('このお試し版は、店舗アカウントでログインした端末だけ回せます。本番公開時はどなたでも回せるようになります。'); return; }
       const pub=await Store.getPublic();
       const day=bizDay();
       if(!pub.enabled || pub.level==='off'){ this.showErr(pub.closedMsg||'本日のガチャはお休みです'); return; }
@@ -579,7 +581,7 @@ const G = {
       </div>
       <p class="note" style="text-align:center">六本木 DENSE ／ Instagram @dense_roppongi</p>
       <button class="btn ghost block" type="button" id="g-back">閉じる</button>
-      ${(Store.isAdmin||Store.mode!=='db')?'<button class="btn ghost sm block" type="button" id="g-reset" style="color:var(--warn);border-color:rgba(240,179,90,.5)">テスト用：今日の結果を消して回し直す（店舗アカウントのみ表示）</button>':''}`;
+      ${(Store.isAdmin||Store.standalone)?'<button class="btn ghost sm block" type="button" id="g-reset" style="color:var(--warn);border-color:rgba(240,179,90,.5)">テスト用：今日の結果を消して回し直す（店舗アカウントのみ表示）</button>':''}`;
     const back=()=>{ r.hidden=true; this.pending=null; $('#g-stage').hidden=false; $('#g-head').hidden=false; $('#g-form').hidden=false; $('#g-open').hidden=true; $('#tap-hint').hidden=true; const m=$('#machine'); m.classList.remove('dropped','opened','spinning'); };
     $('#g-back').addEventListener('click',back);
     const rb=$('#g-reset'); if(rb) rb.addEventListener('click',async()=>{ rb.disabled=true; try{ const n=await Store.resetMyToday(e.day); toast(n?`今日の結果 ${n}件を消しました。もう一度回せます`:'消す結果がありませんでした'); back(); }catch(err){ console.error(err); toast('リセットできませんでした'); rb.disabled=false; } });
