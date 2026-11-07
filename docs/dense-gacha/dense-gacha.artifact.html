@@ -430,6 +430,14 @@ const Store = {
     if(this.mode==='db'){ const q=await this.db.collection('spins').get(); for(const d of q.docs){ const b=d.data()||{}; const entries=(b.entries||[]).filter(e=>e.day!==day); if(entries.length!==(b.entries||[]).length) await this.db.doc('spins/'+d.id).set({...b, entries}); } await this.db.doc('counters/'+day).set({counts:{}, total:0}); }
     else { LS.set('spins', LS.get('spins',[]).filter(e=>e.day!==day)); LS.set('counters_'+day,{counts:{},total:0}); }
   },
+  // test helper: wipe this viewer's spins for the day and give the counters back
+  async resetMyToday(day){
+    let removed=[];
+    if(this.mode==='db'){ if(!this.uid) return 0; const ref=this.db.doc('spins/'+this.uid); const s=await ref.get(); const all=s.exists?(s.data().entries||[]):[]; removed=all.filter(e=>e.day===day); if(removed.length) await ref.set({entries: all.filter(e=>e.day!==day), uid:this.uid}); }
+    else { const all=LS.get('spins',[]); removed=all.filter(e=>e.day===day); LS.set('spins', all.filter(e=>e.day!==day)); }
+    if(removed.length){ const c=await this.getCounters(day); c.counts=c.counts||{}; removed.forEach(e=>{ c.counts[e.prizeId]=Math.max(0,(c.counts[e.prizeId]||0)-1); }); c.total=Math.max(0,(c.total||0)-removed.length); await this.setCounters(day,c); }
+    return removed.length;
+  },
 };
 
 /* ---------- level logic ---------- */
@@ -550,8 +558,11 @@ const G = {
         <div class="foot">この画面をスクショして、入店時にスタッフへ見せてください。ニックネーム・日時・コードはお店側の記録と照合します。ほかのクーポンとの併用不可。</div>
       </div>
       <p class="note" style="text-align:center">六本木 DENSE ／ Instagram @dense_roppongi</p>
-      <button class="btn ghost block" type="button" id="g-back">閉じる</button>`;
-    $('#g-back').addEventListener('click',()=>{ r.hidden=true; $('#g-stage').hidden=false; const m=$('#machine'); m.classList.remove('dropped','opened','spinning'); });
+      <button class="btn ghost block" type="button" id="g-back">閉じる</button>
+      ${(Store.isAdmin||Store.mode!=='db')?'<button class="btn ghost sm block" type="button" id="g-reset" style="color:var(--warn);border-color:rgba(240,179,90,.5)">テスト用：今日の結果を消して回し直す（店舗アカウントのみ表示）</button>':''}`;
+    const back=()=>{ r.hidden=true; $('#g-stage').hidden=false; const m=$('#machine'); m.classList.remove('dropped','opened','spinning'); };
+    $('#g-back').addEventListener('click',back);
+    const rb=$('#g-reset'); if(rb) rb.addEventListener('click',async()=>{ rb.disabled=true; try{ const n=await Store.resetMyToday(e.day); toast(n?`今日の結果 ${n}件を消しました。もう一度回せます`:'消す結果がありませんでした'); back(); }catch(err){ console.error(err); toast('リセットできませんでした'); rb.disabled=false; } });
     r.scrollIntoView({behavior:'smooth',block:'start'});
   }
 };
