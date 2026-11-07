@@ -98,6 +98,7 @@ input[type=number]{font-variant-numeric:tabular-nums}
 .ticket .sub{font-size:13px;color:var(--ink2);margin-top:4px}
 .ticket .bottom{padding:14px 18px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:12px}
 .ticket .bottom .k{color:var(--mute);font-size:10.5px;letter-spacing:.08em}
+.ticket .bottom .wide{grid-column:1/-1}
 .ticket .bottom .v{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
 .ticket .bottom .code{font-family:var(--disp);font-size:24px;letter-spacing:.12em;color:var(--gold2);line-height:1}
 .ticket .stamp{position:absolute;right:14px;top:14px;width:64px;height:64px;border:2px solid rgba(240,210,138,.7);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:11px;letter-spacing:.1em;color:var(--gold2);transform:rotate(-12deg);text-align:center;line-height:1.1;background:rgba(0,0,0,.25)}
@@ -111,7 +112,7 @@ input[type=number]{font-variant-numeric:tabular-nums}
 .lvl{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:18px}
 .bars{display:flex;flex-direction:column;gap:7px;margin-top:6px}
 .bar{display:grid;grid-template-columns:118px 1fr 44px;gap:8px;align-items:center;font-size:12.5px}
-.bar .n{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .n{color:var(--ink2);line-height:1.25;font-size:12px}
 .bar .t{height:10px;background:var(--card2);border-radius:5px;overflow:hidden}
 .bar .t i{display:block;height:100%;background:var(--gold);border-radius:5px}
 .bar .p{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums;font-weight:700}
@@ -164,9 +165,11 @@ details summary{cursor:pointer;color:var(--gold2);font-weight:700;font-size:13.5
       <div class="logo">DENSE<small>ROPPONGI · SHISHA BAR</small></div>
       <span class="pill g" id="g-day">本日限り</span>
     </div>
-    <div class="eyebrow">TONIGHT'S LUCK</div>
-    <h1>ニックネームを入れて、<br>ガチャを回す。</h1>
-    <p class="lead">当たったクーポンは<b style="color:var(--ink)">スクショして入店時に見せる</b>だけ。1人1日1回、有効期限は本日の営業中。</p>
+    <div id="g-head">
+      <div class="eyebrow">TONIGHT'S LUCK</div>
+      <h1>ニックネームを入れて、<br>ガチャを回す。</h1>
+      <p class="lead">当たったクーポンは<b style="color:var(--ink)">スクショして入店時に見せる</b>だけ。1人1日1回、有効期限は本日の営業中。</p>
+    </div>
 
     <div id="g-stage">
       <div class="machine-wrap" id="machine">
@@ -309,7 +312,7 @@ details summary{cursor:pointer;color:var(--gold2);font-weight:700;font-size:13.5
       <!-- prizes -->
       <div class="card">
         <h2><span class="b">4</span>景品と確率の設定</h2>
-        <p class="note" style="margin-bottom:8px">数字は「重み」。大きいほど出やすい。初期値は <b>強め＝9割が大当たり</b>、<b>控えめ＝ほぼ5%・10% OFF</b>。上限は1営業日に出す最大枚数（0＝無制限）で、上限に達した景品は出なくなります。</p>
+        <p class="note" style="margin-bottom:8px">数字は「重み」。大きいほど出やすい。初期値は <b>強め＝9割が大当たり</b>、<b>控えめ＝ほぼ5%・10% OFF</b>。上限は1営業日に出す最大枚数（0＝無制限）で、上限に達した景品は出なくなります。表は横にスクロールできます。</p>
         <div class="tbl-wrap"><table id="p-table">
           <thead><tr><th>景品</th><th>ひとこと</th><th>控えめ</th><th>ふつう</th><th>強め</th><th>上限/日</th><th>大当たり</th><th></th></tr></thead>
           <tbody></tbody>
@@ -339,8 +342,9 @@ details summary{cursor:pointer;color:var(--gold2);font-weight:700;font-size:13.5
             <div class="col"><label class="f" for="o-msg">配布停止中に出すメッセージ</label><input type="text" id="o-msg"></div>
           </div>
           <button class="btn primary sm" id="o-save" type="button">設定を保存</button>
+          <div><label class="f" for="o-url">ガチャ画面のURL（ストーリーズのリンクに貼る）</label><input type="text" id="o-url" readonly></div>
           <div class="row">
-            <button class="btn ghost sm" id="o-copy" type="button">ガチャ画面のURLをコピー（ストーリーズ用）</button>
+            <button class="btn ghost sm" id="o-copy" type="button">URLをコピー</button>
             <button class="btn danger sm" id="o-reset" type="button">今日のログをすべて削除</button>
           </div>
           <p class="note" id="o-reset-note" hidden>本当に削除しますか？ <button class="btn danger sm" id="o-reset-yes" type="button">削除する</button> <button class="btn ghost sm" id="o-reset-no" type="button">やめる</button></p>
@@ -391,6 +395,9 @@ async function makeCode(str){
 const uid8 = () => Math.random().toString(36).slice(2,10);
 // snapshots from the shared store are frozen: always work on a copy
 const clone = x => (x==null ? x : JSON.parse(JSON.stringify(x)));
+const SHARE_URL='https://claude.ai/artifact/XSbYWe639TRU9E1kj7eGtF';
+function shareUrl(){ return Store.mode==='db' ? SHARE_URL : location.href.split('#')[0]; }
+const SS={ get(k){ try{ return sessionStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ sessionStorage.setItem(k,v); }catch(e){} } };
 
 /* ---------- storage: shared db when available, else this device ---------- */
 const LS = {
@@ -548,9 +555,10 @@ const G = {
   },
   renderTicket(e, pub, again){
     const r=$('#g-result'); r.hidden=false;
-    $('#g-stage').hidden=true;
+    $('#g-stage').hidden=true; $('#g-head').hidden=true;
     r.innerHTML=`
-      ${again?'<p class="note" style="text-align:center">今日はもう回しています。本日の結果はこちら。</p>':''}
+      <div class="eyebrow">RESULT</div>
+      <h1 style="font-size:22px;margin-bottom:10px">${e.big?'大当たり！':'当たり！'}<small>${again?'今日はもう回しています。本日の結果はこちら。':'この画面をスクショして、入店時にスタッフへ見せてください。'}</small></h1>
       <div class="ticket ${e.big?'big':''}">
         <div class="stamp">${e.big?'BIG<br>WIN':'LUCKY'}</div>
         <div class="top">
@@ -563,16 +571,16 @@ const G = {
         </div>
         <div class="bottom">
           <div><div class="k">NICKNAME</div><div class="v">${esc(e.nick)}</div></div>
-          <div><div class="k">DATE / TIME</div><div class="v">${fmtTs(e.ts)}</div></div>
           <div><div class="k">CODE</div><div class="code">${esc(e.code)}</div></div>
-          <div><div class="k">VALID</div><div class="v">${fmtDayJa(e.day)} 営業中のみ</div></div>
+          <div class="wide"><div class="k">DATE / TIME</div><div class="v">${fmtTs(e.ts)}</div></div>
+          <div class="wide"><div class="k">VALID</div><div class="v">${fmtDayJa(e.day)} の営業中のみ有効</div></div>
         </div>
         <div class="foot">この画面をスクショして、入店時にスタッフへ見せてください。ニックネーム・日時・コードはお店側の記録と照合します。ほかのクーポンとの併用不可。</div>
       </div>
       <p class="note" style="text-align:center">六本木 DENSE ／ Instagram @dense_roppongi</p>
       <button class="btn ghost block" type="button" id="g-back">閉じる</button>
       ${(Store.isAdmin||Store.mode!=='db')?'<button class="btn ghost sm block" type="button" id="g-reset" style="color:var(--warn);border-color:rgba(240,179,90,.5)">テスト用：今日の結果を消して回し直す（店舗アカウントのみ表示）</button>':''}`;
-    const back=()=>{ r.hidden=true; this.pending=null; $('#g-stage').hidden=false; $('#g-form').hidden=false; $('#g-open').hidden=true; $('#tap-hint').hidden=true; const m=$('#machine'); m.classList.remove('dropped','opened','spinning'); };
+    const back=()=>{ r.hidden=true; this.pending=null; $('#g-stage').hidden=false; $('#g-head').hidden=false; $('#g-form').hidden=false; $('#g-open').hidden=true; $('#tap-hint').hidden=true; const m=$('#machine'); m.classList.remove('dropped','opened','spinning'); };
     $('#g-back').addEventListener('click',back);
     const rb=$('#g-reset'); if(rb) rb.addEventListener('click',async()=>{ rb.disabled=true; try{ const n=await Store.resetMyToday(e.day); toast(n?`今日の結果 ${n}件を消しました。もう一度回せます`:'消す結果がありませんでした'); back(); }catch(err){ console.error(err); toast('リセットできませんでした'); rb.disabled=false; } });
     r.scrollIntoView({behavior:'smooth',block:'start'});
@@ -588,9 +596,9 @@ const A = {
     await Store.ready;
     $('#a-gate').hidden=true; $('#a-denied').hidden=true; $('#a-body').hidden=true;
     if(Store.mode==='db'){ if(Store.isAdmin) await this.enter(); else $('#a-denied').hidden=false; return; }
-    if(sessionStorage.getItem('dg_admin')==='1'){ await this.enter(); return; }
+    if(SS.get('dg_admin')==='1'){ await this.enter(); return; }
     $('#a-gate').hidden=false;
-    $('#pin-btn').onclick=async()=>{ const priv=await Store.getPrivate(); if($('#pin').value===String(priv.pin||'2525')){ sessionStorage.setItem('dg_admin','1'); $('#pin-err').hidden=true; await this.enter(); } else $('#pin-err').hidden=false; };
+    $('#pin-btn').onclick=async()=>{ const priv=await Store.getPrivate(); if($('#pin').value===String(priv.pin||'2525')){ SS.set('dg_admin','1'); $('#pin-err').hidden=true; await this.enter(); } else $('#pin-err').hidden=false; };
   },
   async enter(){
     $('#a-gate').hidden=true; $('#a-body').hidden=false;
@@ -612,6 +620,7 @@ const A = {
     $$('#s-override button').forEach(b=>b.classList.toggle('on', b.dataset.v===p.override));
     $('#o-total').value=u.dailyTotalCap; $('#o-group').value=p.groupSize; $('#o-strong').value=p.strongPct; $('#o-weak').value=p.weakPct;
     $('#o-repeat').checked=!!u.allowRepeat; $('#o-pin').value=p.pin||'2525'; $('#o-msg').value=u.closedMsg||'';
+    $('#o-url').value=shareUrl();
   },
   readStatus(){
     return {...this.priv, reservations:+$('#s-res').value||0, guests:+$('#s-guests').value||0, baseline:+$('#s-base').value||1, weather:$('#s-weather').value, override:($('#s-override .on')||{}).dataset?.v||'auto', groupSize:+$('#o-group').value||2.5, strongPct:+$('#o-strong').value||50, weakPct:+$('#o-weak').value||90, pin:$('#o-pin').value||'2525'};
@@ -676,7 +685,7 @@ const A = {
     $('#l-q').addEventListener('input',()=>this.renderLog());
     $$('.seg [data-f]').forEach(b=>b.addEventListener('click',()=>{ $$('.seg [data-f]').forEach(x=>x.classList.remove('on')); b.classList.add('on'); this.filter=b.dataset.f; this.renderLog(); }));
     $('#l-list').addEventListener('click',async e=>{ const b=e.target.closest('button[data-id]'); if(!b) return; b.disabled=true; try{ await Store.setSpinUsed(b.dataset.uid, b.dataset.id, b.dataset.used==='1'); if(Store.mode!=='db'){ this.spins=await Store.getAllSpins(); this.renderToday(); this.renderLog(); } toast(b.dataset.used==='1'?'使用済みにしました':'未使用に戻しました'); }catch(err){ console.error(err); toast('更新できませんでした'); b.disabled=false; } });
-    $('#o-copy').addEventListener('click',async()=>{ const url=location.href.split('#')[0]; try{ await navigator.clipboard.writeText(url); toast('URLをコピーしました'); }catch(e){ const i=document.createElement('input'); i.value=url; document.body.appendChild(i); i.select(); toast('長押しでコピーしてください：'+url); setTimeout(()=>i.remove(),4000); } });
+    $('#o-copy').addEventListener('click',async()=>{ const url=shareUrl(); try{ await navigator.clipboard.writeText(url); toast('URLをコピーしました'); }catch(e){ const i=$('#o-url'); i.focus(); i.select(); toast('この端末では自動コピーできません。URL欄を長押ししてコピーしてください'); } });
     $('#o-reset').addEventListener('click',()=>{ $('#o-reset-note').hidden=false; });
     $('#o-reset-no').addEventListener('click',()=>{ $('#o-reset-note').hidden=true; });
     $('#o-reset-yes').addEventListener('click',async()=>{ try{ await Store.deleteDay(bizDay()); $('#o-reset-note').hidden=true; if(Store.mode!=='db'){ this.spins=await Store.getAllSpins(); this.renderToday(); this.renderLog(); } toast('今日のログを削除しました'); }catch(e){ console.error(e); toast('削除できませんでした'); } });
