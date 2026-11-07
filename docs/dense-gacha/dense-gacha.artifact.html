@@ -300,13 +300,14 @@ details summary{cursor:pointer;color:var(--gold2);font-weight:700;font-size:13.5
       <!-- prizes -->
       <div class="card">
         <h2><span class="b">4</span>景品と確率の設定</h2>
-        <p class="note" style="margin-bottom:8px">数字は「重み」。大きいほど出やすい。上限は1営業日に出す最大枚数（0＝無制限）。</p>
+        <p class="note" style="margin-bottom:8px">数字は「重み」。大きいほど出やすい。初期値は <b>強め＝9割が大当たり</b>、<b>控えめ＝ほぼ5%・10% OFF</b>。上限は1営業日に出す最大枚数（0＝無制限）で、上限に達した景品は出なくなります。</p>
         <div class="tbl-wrap"><table id="p-table">
           <thead><tr><th>景品</th><th>ひとこと</th><th>控えめ</th><th>ふつう</th><th>強め</th><th>上限/日</th><th>大当たり</th><th></th></tr></thead>
           <tbody></tbody>
         </table></div>
         <div class="row" style="margin-top:10px">
           <button class="btn ghost sm" id="p-add" type="button">＋ 景品を追加</button>
+          <button class="btn ghost sm" id="p-reset" type="button">初期値に戻す</button>
           <button class="btn primary sm" id="p-save" type="button">景品設定を保存</button>
         </div>
       </div>
@@ -351,12 +352,13 @@ const LIDX = { weak:0, normal:1, strong:2 };
 
 /* ---------- defaults ---------- */
 const DEFAULT_PRIZES = [
-  { id:'p5',   name:'5% OFF',            sub:'お会計から5%引き',          w:[55,30,10], cap:0,  big:false, ico:'p-pct' },
-  { id:'p10',  name:'10% OFF',           sub:'お会計から10%引き',         w:[30,30,15], cap:0,  big:false, ico:'p-pct' },
-  { id:'y1000',name:'1,000円 OFF',       sub:'お会計から1,000円引き',     w:[10,22,25], cap:0,  big:false, ico:'p-yen' },
-  { id:'y1500',name:'1,500円 OFF',       sub:'お会計から1,500円引き',     w:[4,12,25],  cap:10, big:false, ico:'p-yen' },
-  { id:'btl',  name:'焼酎ボトル1本 無料', sub:'対象の焼酎ボトル1本をサービス', w:[1,5,18], cap:3, big:true, ico:'p-bottle' },
-  { id:'teq',  name:'テキーラ30杯 サービス', sub:'グループで30ショットまで',  w:[0,1,7],    cap:1,  big:true,  ico:'p-shots' },
+  // w = [控えめ, ふつう, 強め] の重み。強めは9割が大当たり、控えめは5%・10% OFFがほぼ全部
+  { id:'p5',   name:'5% OFF',            sub:'お会計から5%引き',          w:[70,15,0],  cap:0,  big:false, ico:'p-pct' },
+  { id:'p10',  name:'10% OFF',           sub:'お会計から10%引き',         w:[25,30,0],  cap:0,  big:false, ico:'p-pct' },
+  { id:'p30',  name:'30% OFF',           sub:'お会計から30%引き',         w:[4,30,4],   cap:0,  big:false, ico:'p-pct' },
+  { id:'y1500',name:'1,500円 OFF',       sub:'お会計から1,500円引き',     w:[1,15,6],   cap:0,  big:false, ico:'p-yen' },
+  { id:'btl',  name:'焼酎ボトル1本 無料', sub:'対象の焼酎ボトル1本をサービス', w:[0,7,55],  cap:5,  big:true,  ico:'p-bottle' },
+  { id:'teq',  name:'テキーラ30杯 サービス', sub:'グループで30ショットまで',  w:[0,3,35],   cap:2,  big:true,  ico:'p-shots' },
 ];
 const DEFAULT_PUBLIC = { prizes: DEFAULT_PRIZES, level:'normal', enabled:true, closedMsg:'本日のガチャはお休みです。また次回！', dailyTotalCap:60, allowRepeat:false, salt:'dense-2026', updatedAt:0 };
 const DEFAULT_PRIVATE = { reservations:0, guests:0, baseline:20, weather:'sunny', override:'auto', groupSize:2.5, strongPct:50, weakPct:90, pin:'2525' };
@@ -644,6 +646,7 @@ const A = {
     ['#s-res','#s-guests','#s-base','#s-weather','#o-group','#o-strong','#o-weak'].forEach(s=>$(s).addEventListener('input',()=>this.renderLevel()));
     $('#s-save').addEventListener('click',async()=>{ try{ this.priv=this.readStatus(); await Store.setPrivate(this.priv); const r=computeLevel(this.priv); this.pub=await Store.setPublic({...this.pub, level:r.level, enabled:r.level!=='off'}); this.renderBanner(); toast('反映しました：'+LEVELS[r.level]); }catch(e){ console.error(e); toast('保存できませんでした'); } });
     $('#p-add').addEventListener('click',()=>{ this.pub={...this.pub, prizes:[...this.readPrizes(), {id:'x'+uid8(), name:'新しい景品', sub:'', w:[10,10,10], cap:0, big:false, ico:'p-pct', enabled:true}]}; this.renderPrizes(); });
+    $('#p-reset').addEventListener('click',()=>{ this.pub={...this.pub, prizes:DEFAULT_PRIZES.map(p=>({...p, w:[...p.w]}))}; this.renderPrizes(); this.renderLevel(); toast('初期値を読み込みました。「景品設定を保存」で反映されます'); });
     $('#p-table').addEventListener('click',e=>{ const b=e.target.closest('.pdel'); if(!b) return; const tr=b.closest('tr'); const list=this.readPrizes(); list.splice(+tr.dataset.i,1); this.pub={...this.pub, prizes:list}; this.renderPrizes(); });
     $('#p-save').addEventListener('click',async()=>{ try{ this.pub=await Store.setPublic({...this.pub, prizes:this.readPrizes()}); this.renderPrizes(); this.renderLevel(); this.renderToday(); toast('景品設定を保存しました'); }catch(e){ console.error(e); toast('保存できませんでした'); } });
     $('#o-save').addEventListener('click',async()=>{ try{ this.priv=this.readStatus(); await Store.setPrivate(this.priv); this.pub=await Store.setPublic({...this.pub, dailyTotalCap:+$('#o-total').value||60, allowRepeat:$('#o-repeat').checked, closedMsg:$('#o-msg').value.trim()||DEFAULT_PUBLIC.closedMsg}); this.renderBanner(); toast('設定を保存しました'); }catch(e){ console.error(e); toast('保存できませんでした'); } });
